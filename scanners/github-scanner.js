@@ -16,15 +16,16 @@ async function scanGitHubRepository(owner, repo, regexPairs, fileExtensions) {
         throw new Error('Unexpected response from GitHub API');
       }
 
-      console.log(response.data)
-
       for (const item of response.data) {
-        if (item.type === 'file' && fileExtensions.includes(item.path.split('.').pop())) {
+        const fileExtension = `${item.path.split('.').pop()}`;
+        console.log(fileExtensions.includes(fileExtension))
+        if (item.type === 'file' && fileExtensions.includes(fileExtension)) {
           const fileContentResponse = await octokit.rest.repos.getContent({
             owner,
             repo,
             path: item.path,
           });
+          console.log(fileContentResponse)
           const fileContent = Buffer.from(fileContentResponse.data.content, 'base64').toString('utf-8');
           const filePiiVulnerabilities = scanFileContent(fileContent, regexPairs);
 
