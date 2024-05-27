@@ -1,42 +1,43 @@
 import { Octokit } from 'octokit';
 import { scanFileContent } from './pii-scanner.js';
-import process from 'dotenv'
+import dotenv from 'dotenv';
+dotenv.config();
 
-async function scanGitHubRepository(owner, repo, regexPairs) {
-  const octokit = new Octokit({
-    auth: process.env.GITHUB_TOKEN 
-  });
+async function scanGitHubRepository(owner, repo, regexPairs, fileExtensions) {
+  const octokit = new Octokit({ auth: process.env.GITHUB_TOKEN });
 
   try {
-    const response = await octokit.rest.repos.getContent({ owner, repo, path: '' });
-
-    if (!response.data || !Array.isArray(response.data)) {
-      throw new Error('Unexpected response from GitHub API');
-    }
-
     const piiVulnerabilities = {};
 
-    for (const file of response.data) {
-      if (file.type === 'file') {
-        const fileContentResponse = await octokit.rest.repos.getContent({
-          owner,
-          repo,
-          path: file.path
-        });
-        console.log(fileContentResponse);
-        const fileContent = Buffer.from(fileContentResponse.data.content, 'base64').toString('utf-8');
+    const scanDirectory = async (path) => {
+      const response = await octokit.rest.repos.getContent({ owner, repo, path });
 
-        console.log(fileContent);
+      if (!response.data || !Array.isArray(response.data)) {
+        throw new Error('Unexpected response from GitHub API');
+      }
 
-        const filePiiVulnerabilities = scanFileContent(fileContent, regexPairs);
+      console.log(response.data)
 
-        console.log(`PII vulnerabilities in ${file.path}:`, filePiiVulnerabilities);
+      for (const item of response.data) {
+        if (item.type === 'file' && fileExtensions.includes(item.path.split('.').pop())) {
+          const fileContentResponse = await octokit.rest.repos.getContent({
+            owner,
+            repo,
+            path: item.path,
+          });
+          const fileContent = Buffer.from(fileContentResponse.data.content, 'base64').toString('utf-8');
+          const filePiiVulnerabilities = scanFileContent(fileContent, regexPairs);
 
-        if (Object.keys(filePiiVulnerabilities).length > 0) {
-          piiVulnerabilities[file.path] = filePiiVulnerabilities;
+          if (Object.keys(filePiiVulnerabilities).length > 0) {
+            piiVulnerabilities[item.path] = filePiiVulnerabilities;
+          }
+        } else if (item.type === 'dir') {
+          await scanDirectory(`${path}/${item.name}`);
         }
       }
-    }
+    };
+
+    await scanDirectory('');
 
     return piiVulnerabilities;
   } catch (error) {

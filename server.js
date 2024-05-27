@@ -7,10 +7,10 @@ const port = 3000;
 app.use(express.json());
 
 app.post('/scan-github', async (req, res) => {
-  const { owner, repo, regexPairs } = req.body;
+  const { owner, repo, regexPairs, fileExtensions } = req.body;
 
   try {
-    const piiVulnerabilities = await scanGitHubRepository(owner, repo, regexPairs);
+    const piiVulnerabilities = await scanGitHubRepository(owner, repo, regexPairs, fileExtensions);
     res.json(piiVulnerabilities);
   } catch (error) {
     console.error('Error scanning GitHub repository:', error);
