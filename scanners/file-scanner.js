@@ -1,29 +1,25 @@
-const path = require('path');
-const fileUtils = require('../utils/file-utils');
+// import path from 'path'
+// import fileUtils from '../utils/file-utils.js';
 
-function scanDirectory(directory, extensions) {
-  const filePaths = [];
+// export function scanDirectory(directory, extensions) {
+//   const filePaths = [];
 
-  function traverseDirectory(currentPath) {
-    const files = fileUtils.readDirectory(currentPath);
+//   function traverseDirectory(currentPath) {
+//     const files = fileUtils.readDirectory(currentPath);
 
-    files.forEach((file) => {
-      const filePath = path.join(currentPath, file);
-      const stats = fileUtils.getFileStats(filePath);
+//     files.forEach((file) => {
+//       const filePath = path.join(currentPath, file);
+//       const stats = fileUtils.getFileStats(filePath);
 
-      if (stats.isDirectory()) {
-        traverseDirectory(filePath);
-      } else if (extensions.includes(path.extname(filePath))) {
-        filePaths.push(filePath);
-      }
-    });
-  }
+//       if (stats.isDirectory()) {
+//         traverseDirectory(filePath);
+//       } else if (extensions.includes(path.extname(filePath))) {
+//         filePaths.push(filePath);
+//       }
+//     });
+//   }
 
-  traverseDirectory(directory);
+//   traverseDirectory(directory);
 
-  return filePaths;
-}
-
-module.exports = {
-  scanDirectory,
-};
+//   return filePaths;
+// }
