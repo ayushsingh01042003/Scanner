@@ -18,7 +18,6 @@ async function scanGitHubRepository(owner, repo, regexPairs, fileExtensions) {
 
       for (const item of response.data) {
         const fileExtension = `${item.path.split('.').pop()}`;
-        console.log(fileExtensions.includes(fileExtension))
         if (item.type === 'file' && fileExtensions.includes(fileExtension)) {
           const fileContentResponse = await octokit.rest.repos.getContent({
             owner,
