@@ -8,7 +8,7 @@ const App = () => {
   const [repo, setRepo] = useState('');
   const [extensions, setExtensions] = useState([]);
   const [keyValuePairs, setKeyValuePairs] = useState({});
-  const [response, setResponse] = useState(null);
+  const [generatedJSON, setGeneratedJSON] = useState(null);
 
   const handleExtensionsChange = (extensionArray) => {
     setExtensions(extensionArray);
@@ -24,7 +24,7 @@ const App = () => {
     setKeyValuePairs(formattedPairs);
   };
 
-  const handleSubmit = async (event) => {
+  const handleSubmit = (event) => {
     event.preventDefault();
     if (!owner || !repo || extensions.length === 0 || Object.keys(keyValuePairs).length === 0) {
       alert('Please provide all the required inputs.');
@@ -38,19 +38,7 @@ const App = () => {
       regexPairs: keyValuePairs
     };
 
-    try {
-      const response = await fetch('http://localhost:5000/upload', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(payload),
-      });
-      const data = await response.json();
-      setResponse(data);
-    } catch (error) {
-      console.error('Error uploading data:', error);
-    }
+    setGeneratedJSON(payload);
   };
 
   return (
@@ -83,10 +71,10 @@ const App = () => {
           Submit
         </button>
       </form>
-      {response && (
+      {generatedJSON && (
         <div className="mt-6">
-          <h3 className="text-lg font-medium text-gray-700">Response</h3>
-          <pre className="bg-gray-100 p-4 rounded-lg shadow-sm">{JSON.stringify(response, null, 2)}</pre>
+          <h3 className="text-lg font-medium text-gray-700">Generated JSON</h3>
+          <pre className="bg-gray-100 p-4 rounded-lg shadow-sm">{JSON.stringify(generatedJSON, null, 2)}</pre>
         </div>
       )}
     </div>
