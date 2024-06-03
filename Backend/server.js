@@ -1,17 +1,23 @@
 import express from 'express';
 import { scanGitHubRepository } from './scanners/github-scanner.js';
 
+import dotenv from "dotenv"
+dotenv.config()
+
+
 const app = express();
 const port = 3000;
 
 app.use(express.json());
 
+
 app.post('/scan-github', async (req, res) => {
   const { owner, repo, regexPairs, fileExtensions } = req.body;
 
   try {
-    const piiVulnerabilities = await scanGitHubRepository(owner, repo, regexPairs, fileExtensions);
-    res.json(piiVulnerabilities);
+    const [piiVulnerabilities,remaining] = await scanGitHubRepository(owner, repo, regexPairs, fileExtensions);
+    
+    res.json({piiVulnerabilities,remaining});
   } catch (error) {
     console.error('Error scanning GitHub repository:', error);
     console.error(error.stack);
