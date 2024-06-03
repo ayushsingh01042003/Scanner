@@ -3,31 +3,34 @@ import { scanFileContent } from './pii-scanner.js';
 import dotenv from 'dotenv';
 dotenv.config();
 
+
+
 async function scanGitHubRepository(owner, repo, regexPairs, fileExtensions) {
   const octokit = new Octokit({ auth: process.env.GITHUB_TOKEN });
 
   try {
     const piiVulnerabilities = {};
-
+    let remaining_request = 5000
     const scanDirectory = async (path) => {
       const response = await octokit.rest.repos.getContent({ owner, repo, path });
-
+      remaining_request = response.headers['x-ratelimit-remaining']
+      console.log(response.headers)
       if (!response.data || !Array.isArray(response.data)) {
         throw new Error('Unexpected response from GitHub API');
       }
-
       for (const item of response.data) {
         const fileExtension = `${item.path.split('.').pop()}`;
         if (item.type === 'file' && fileExtensions.includes(fileExtension)) {
+          console.log(item.path)
           const fileContentResponse = await octokit.rest.repos.getContent({
             owner,
             repo,
             path: item.path,
           });
-          console.log(fileContentResponse)
+          // console.log(fileContentResponse)
           const fileContent = Buffer.from(fileContentResponse.data.content, 'base64').toString('utf-8');
           const filePiiVulnerabilities = scanFileContent(fileContent, regexPairs);
-
+          console.log(filePiiVulnerabilities)
           if (Object.keys(filePiiVulnerabilities).length > 0) {
             piiVulnerabilities[item.path] = filePiiVulnerabilities;
           }
@@ -37,9 +40,9 @@ async function scanGitHubRepository(owner, repo, regexPairs, fileExtensions) {
       }
     };
 
-    await scanDirectory('');
-
-    return piiVulnerabilities;
+    await scanDirectory("");
+    // console.log(piiVulnerabilities)
+    return [piiVulnerabilities, remaining_request];
   } catch (error) {
     console.error('Error scanning GitHub repository:', error);
     throw error;
