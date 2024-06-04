@@ -1,6 +1,6 @@
 import express from 'express';
 import { scanGitHubRepository } from './scanners/github-scanner.js';
-
+import cors from 'cors'
 import dotenv from "dotenv"
 dotenv.config()
 
@@ -9,6 +9,7 @@ const app = express();
 const port = 3000;
 
 app.use(express.json());
+app.use(cors());
 
 
 app.post('/scan-github', async (req, res) => {
