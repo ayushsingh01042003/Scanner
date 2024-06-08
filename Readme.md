@@ -25,3 +25,6 @@ For /scan-directory route
     "emailAddress": "\\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}(?:\\.[A-Za-z]{2,})?\\b"
   }
 }
+
+When Entering information in the UI. Use single slash -> / instead of double slash -> //
+Double slash is only for postman testing because of formatting issues.
