@@ -18,7 +18,7 @@
 
   * [Questions](#questions-)
 
-  * [Example](#Example-)
+  * [Example](#example-)
 
   
   
@@ -47,22 +47,31 @@
   the proper usage of this repository involves the following steps:
 
   i> Install dependencies (npm install or yarn install)
+
   ii> Set up a GitHub access token as an environment variable (GITHUB_TOKEN)
+
   iii> Start the development server (npm run dev or yarn dev)
+
   iv> Access the application in your browser (usually http://localhost:3000)
+
   v> Enter the GitHub owner, repository name, file extensions, and regular expressions for PII detection
+
   vi> Click "Submit" to initiate the scan
+
   vii> View the scan results in the formatted JSON response
+
   viii> Optionally, clear the form using the "Clear" button or modify the key-value pairs for PII detection
+
   ix> Build for production using npm run build or yarn build
   
+
   The application provides a user interface for scanning public GitHub repositories for potential PII vulnerabilities based on the specified file extensions and regular expressions.
 
   
 
   ## Contributors 😃
 
-  @ayushsingh01042003 , @MckinellGreen7 , @smk927 , @Cobal9000 
+  [ayushsingh01042003](https://github.com/ayushsingh01042003/) , [MckinellGreen7](https://github.com/MckinellGreen7/) , [smk927](https://github.com/smk927/) , [Cobalt9000](https://github.com/Cobalt9000/) , [ArshGupta74](https://github.com/ArshGupta74/)
 
   ## Tests 🧪
 
@@ -76,8 +85,8 @@
 
   For additional questions, contact me at the email provided below. 
 
-  - GitHub: [Cobalt9000](https://github.com/Cobalt9000/)
-  - Email:  suprith1201@gmail.com
+  - GitHub: [ArshGupta74](https://github.com/ArshGupta74/)
+  - Email:  arsh.gupta740@gmail.com 
 
   ## Example 📋
 
