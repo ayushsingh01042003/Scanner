@@ -77,9 +77,28 @@
 
   To run tests, run these commands:
 
+  ### In the Backend folder:
+
+  i> to install all the dependencies:
   ```
-  node index.js in the Backend folder and in the Frontend folder run "npm run dev" on their respective integrated terminals
+  npm i
   ```
+  ii> to run the server:
+  ```
+  node index.js
+  ```
+
+  ### In the Frontend folder:
+  i> to install all the dependencies:
+  ```
+  npm i
+  ```
+  ii> to run the frontend on locally on http://localhost:5173/:
+  ```
+  npm run dev
+  ```
+  
+  Run these commands on their respective integrated terminals.
 
   ## Questions ❔
 
