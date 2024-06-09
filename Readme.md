@@ -51,7 +51,7 @@
   
   * [Contributors](#contributors-)
 
-  * [Installation](#backend-and-Frontend-installation-steps-)
+  * [Installation](#backend-and-frontend-installation-steps-)
 
   * [Questions](#questions-)
 
@@ -125,12 +125,12 @@
 
   
 
-  ## Contributors 😃
+  ## Contributors 🧑‍💻
 
   [ayushsingh01042003](https://github.com/ayushsingh01042003/) , [MckinellGreen7](https://github.com/MckinellGreen7/) , [smk927](https://github.com/smk927/) , [Cobalt9000](https://github.com/Cobalt9000/) , [ArshGupta74](https://github.com/ArshGupta74/)
 
 
-  ## Backend and Frontend installation steps:
+  ## Backend and Frontend installation steps 🪜:
 
   ### In the Backend folder:
 
