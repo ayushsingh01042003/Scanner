@@ -27,17 +27,21 @@
   To get started with Code Scanner, follow these steps:
 
   Clone the repository: git clone https://github.com/ayushsingh01042003/Scanner.git
+  
   Install dependencies for the frontend and backend:
 
   Frontend: cd frontend && npm install
+  
   Backend: cd backend && npm install
 
 
   Set up the required environment variables for the backend, GitHub API token in .env file.
 
+
   Start the frontend and backend servers:
 
   Frontend: npm run dev
+  
   Backend: npm start/node index.js
 
 
