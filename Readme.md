@@ -8,21 +8,21 @@
 
   ## Table of Contents 🗒
 
-  * [Installations](#installations-💻)
+  * [Installations](#installations-)
 
-  * [Usage](#usage-🏆)
+  * [Usage](#usage-)
   
-  * [Contributors](#contributors-😃)
+  * [Contributors](#contributors-)
 
-  * [Test](#tests-🧪)
+  * [Test](#tests-)
 
-  * [Questions](#questions)
+  * [Questions](#questions-)
 
-  * [Example](#Example-📋)
+  * [Example](#Example-)
 
   
   
-  ## Installations  💻
+  ## Installations 💻
 
   To install dependencies, run these commands:
 
@@ -72,14 +72,14 @@
   node index.js in the Backend folder and in the Frontend folder run "npm run dev" on their respective integrated terminals
   ```
 
-  ## Questions
+  ## Questions ❔
 
   For additional questions, contact me at the email provided below. 
 
   - GitHub: [Cobalt9000](https://github.com/Cobalt9000/)
   - Email:  suprith1201@gmail.com
 
-  ## Example
+  ## Example 📋
 
   the example key-value pair for the regexPairs and patterns are below: 
 
