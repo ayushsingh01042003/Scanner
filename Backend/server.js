@@ -4,6 +4,7 @@ import scanDirectory from './scanners/file-scanner.js';
 import scanFiles from './scanners/pii-localScanner.js';
 import cors from 'cors'
 import dotenv from "dotenv"
+import mailData from './utils/mail.js';
 dotenv.config()
 
 
@@ -52,6 +53,13 @@ app.post('/scan-directory', (req, res) => {
     res.status(500).json({ error: 'Failed to scan directory', details: error.message });
   }
 });
+
+app.post("/email",async (req, res) => {
+  const {jsonData,receiverEmail} = req.body
+  const result = await mailData(jsonData, receiverEmail)
+  return res.send(result)
+})
+
 
 app.listen(port, () => {
   console.log(`Server is running on http://localhost:${port}`);

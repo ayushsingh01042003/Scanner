@@ -14,7 +14,7 @@ async function scanGitHubRepository(owner, repo, regexPairs, fileExtensions) {
     const scanDirectory = async (path) => {
       const response = await octokit.rest.repos.getContent({ owner, repo, path });
       remaining_request = response.headers['x-ratelimit-remaining']
-      console.log(response.headers)
+      console.log(response)
       if (!response.data || !Array.isArray(response.data)) {
         throw new Error('Unexpected response from GitHub API');
       }
