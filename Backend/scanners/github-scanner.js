@@ -10,11 +10,10 @@ async function scanGitHubRepository(owner, repo, regexPairs, fileExtensions) {
 
   try {
     const piiVulnerabilities = {};
-    let remaining_request = 5000
+    
     const scanDirectory = async (path) => {
       const response = await octokit.rest.repos.getContent({ owner, repo, path });
-      remaining_request = response.headers['x-ratelimit-remaining']
-      console.log(response.headers)
+      console.log(response)
       if (!response.data || !Array.isArray(response.data)) {
         throw new Error('Unexpected response from GitHub API');
       }
@@ -42,7 +41,7 @@ async function scanGitHubRepository(owner, repo, regexPairs, fileExtensions) {
 
     await scanDirectory("");
     // console.log(piiVulnerabilities)
-    return [piiVulnerabilities, remaining_request];
+    return piiVulnerabilities;
   } catch (error) {
     console.error('Error scanning GitHub repository:', error);
     throw error;
