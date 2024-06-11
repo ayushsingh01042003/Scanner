@@ -6,6 +6,8 @@ import { analyzeLocalDirectory, analyzeGitHubRepository } from './utils/language
 import { Octokit } from 'octokit';
 import cors from 'cors';
 import dotenv from "dotenv";
+import remainingRequest from './utils/request-remaining.js';
+import mailData from './utils/mail.js';
 dotenv.config();
 
 const app = express();
@@ -20,8 +22,8 @@ app.post('/scan-github', async (req, res) => {
   const { owner, repo, regexPairs, fileExtensions } = req.body;
 
   try {
-    const [piiVulnerabilities, remaining] = await scanGitHubRepository(owner, repo, regexPairs, fileExtensions);
-    res.json({ piiVulnerabilities, remaining });
+    const piiVulnerabilities = await scanGitHubRepository(owner, repo, regexPairs, fileExtensions);
+    res.json(piiVulnerabilities);
   } catch (error) {
     console.error('Error scanning GitHub repository:', error);
     console.error(error.stack);
@@ -93,8 +95,22 @@ app.post('/analyze-local-directory', async (req, res) => {
 
 app.post("/email",async (req, res) => {
   const {jsonData,receiverEmail} = req.body
-  const result = await mailData(jsonData, receiverEmail)
-  return res.send(result)
+  try{
+    const result = await mailData(jsonData, receiverEmail)
+    return res.send(result)
+  } catch(err){
+    return res.send("Unable to send email")
+  }
+  
+})
+
+app.get('/remaining_request', async (req, res)=>{
+  try{
+    const rem = await remainingRequest()
+    res.send(`Number of Remaining Request: ${rem}`)
+  } catch(err){
+    return res.send("Unable to Fetch Remaining Request")
+  }
 })
 
 
