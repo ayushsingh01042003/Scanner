@@ -1,4 +1,3 @@
-// src/components/CustomCheckbox.jsx
 import React from 'react';
 
 const CustomCheckbox = ({ label, checked, onChange }) => {
