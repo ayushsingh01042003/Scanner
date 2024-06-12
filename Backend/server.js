@@ -57,7 +57,7 @@ app.post('/scan-directory', (req, res) => {
   }
 });
 
-app.post('/analyze-github-repo', async (req, res) => {
+app.post('/github-repo-stats', async (req, res) => {
   const { owner, repo } = req.body;
 
   if (!owner || typeof owner !== 'string') {
@@ -77,7 +77,7 @@ app.post('/analyze-github-repo', async (req, res) => {
   }
 });
 
-app.post('/analyze-local-directory', async (req, res) => {
+app.post('/local-directory-stats', async (req, res) => {
   const { directoryPath } = req.body;
 
   if (!directoryPath || typeof directoryPath !== 'string') {
