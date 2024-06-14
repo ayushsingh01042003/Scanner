@@ -1,12 +1,8 @@
-import React from 'react';
-import jsPDF from 'jspdf';
-import 'jspdf-autotable';
-
 const Report = ({ data }) => {
   const handleDownload = () => {
     const pdf = new jsPDF();
     pdf.setFontSize(18);
-    pdf.text('Scan Report', 14, 22);
+    pdf.text("Scan Report", 14, 22);
     pdf.setFontSize(12);
 
     let yOffset = 30;
@@ -51,7 +47,7 @@ const Report = ({ data }) => {
       yOffset += 10; // Add some space between file sections
     });
 
-    pdf.save('report.pdf');
+    pdf.save("report.pdf");
   };
 
   return (
@@ -70,10 +66,14 @@ const Report = ({ data }) => {
             <ul className="list-disc pl-5 mt-2">
               {Object.keys(data[filePath]).map((key) => (
                 <li key={key} className="mb-2">
-                  <span className="font-medium">{key.charAt(0).toUpperCase() + key.slice(1)}:</span>
+                  <span className="font-medium">
+                    {key.charAt(0).toUpperCase() + key.slice(1)}:
+                  </span>
                   <ul className="list-inside list-circle pl-5">
                     {data[filePath][key].map((item, index) => (
-                      <li key={index} className="text-red-600">{item}</li>
+                      <li key={index} className="text-red-600">
+                        {item}
+                      </li>
                     ))}
                   </ul>
                 </li>
