@@ -19,10 +19,10 @@ app.use(cors());
 const octokit = new Octokit({ auth: process.env.GITHUB_TOKEN });
 
 app.post('/scan-github', async (req, res) => {
-  const { owner, repo, regexPairs, fileExtensions } = req.body;
+  const { owner, repo, regexPairs } = req.body;
 
   try {
-    const piiVulnerabilities = await scanGitHubRepository(owner, repo, regexPairs, fileExtensions);
+    const piiVulnerabilities = await scanGitHubRepository(owner, repo, regexPairs);
     res.json(piiVulnerabilities);
   } catch (error) {
     console.error('Error scanning GitHub repository:', error);
@@ -32,7 +32,7 @@ app.post('/scan-github', async (req, res) => {
 });
 
 app.post('/scan-directory', (req, res) => {
-  const { directoryPath, extensionArray, regexPairs } = req.body;
+  const { directoryPath, extensionArray, regexPairs } = req.body;//remove extensions array
 
   if (!directoryPath || typeof directoryPath !== 'string') {
     return res.status(400).json({ error: 'Invalid or missing directoryPath in request body' });
@@ -85,7 +85,7 @@ app.post('/local-directory-stats', async (req, res) => {
   }
 
   try {
-    const languageStats = await analyzeLocalDirectory(directoryPath);
+    const languageStats = await analyzeLocalDirectory(directoryPath);//extensions to be scanned are written manually right now. Try to get some fix for that
     res.json(languageStats);
   } catch (error) {
     console.error('Error analyzing local directory:', error);
