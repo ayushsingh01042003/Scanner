@@ -53,7 +53,6 @@ app.post('/scan-directory', (req, res) => {
   }
 });
 
-
 app.post('/github-repo-stats', async (req, res) => {
   const { owner, repo } = req.body;
 

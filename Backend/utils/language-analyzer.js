@@ -4,24 +4,6 @@ import { promisify } from 'util';
 
 const stat = promisify(fs.stat);
 
-const languageExtensions = {
-  '.js': 'JavaScript',
-  '.jsx': 'JavaScript',
-  '.ts': 'TypeScript',
-  '.tsx': 'TypeScript',
-  '.py': 'Python',
-  '.java': 'Java',
-  '.html': 'HTML',
-  '.css': 'CSS',
-  '.scss': 'SCSS',
-  '.less': 'Less',
-  '.php': 'PHP',
-  '.rb': 'Ruby',
-  '.go': 'Go',
-  '.rs': 'Rust',
-  // Add more extensions and languages as needed
-};
-
 async function analyzeLocalDirectory(directoryPath) {
   const languageStats = {};
   let totalBytes = 0;
@@ -36,11 +18,9 @@ async function analyzeLocalDirectory(directoryPath) {
         await scanDir(itemPath);
       } else if (itemStat.isFile()) {
         const ext = path.extname(itemPath).toLowerCase();
-        if (ext in languageExtensions) {
-          const language = languageExtensions[ext];
-          languageStats[language] = (languageStats[language] || 0) + itemStat.size;
-          totalBytes += itemStat.size;
-        }
+        const language = ext.slice(1); // Use the file extension (without the dot) as the language
+        languageStats[language] = (languageStats[language] || 0) + itemStat.size;
+        totalBytes += itemStat.size;
       }
     }
   };
