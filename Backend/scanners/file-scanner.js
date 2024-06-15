@@ -1,7 +1,7 @@
 import path from 'path'
 import { readDirectory, getFileStats } from '../utils/file-utils.js'
 
-function scanDirectory(directory, extensions) {
+function scanDirectory(directory) {
   const filePaths = [];
 
   function traverseDirectory(currentPath) {
@@ -13,7 +13,7 @@ function scanDirectory(directory, extensions) {
 
       if (stats.isDirectory()) {
         traverseDirectory(filePath);
-      } else if (extensions.includes(path.extname(filePath))) {
+      } else {
         filePaths.push(filePath);
       }
     });

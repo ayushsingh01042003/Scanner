@@ -32,14 +32,10 @@ app.post('/scan-github', async (req, res) => {
 });
 
 app.post('/scan-directory', (req, res) => {
-  const { directoryPath, extensionArray, regexPairs } = req.body;//remove extensions array
+  const { directoryPath, regexPairs } = req.body;
 
   if (!directoryPath || typeof directoryPath !== 'string') {
     return res.status(400).json({ error: 'Invalid or missing directoryPath in request body' });
-  }
-
-  if (!Array.isArray(extensionArray)) {
-    return res.status(400).json({ error: 'extensionArray must be an array' });
   }
 
   if (!regexPairs || typeof regexPairs !== 'object') {
@@ -47,7 +43,7 @@ app.post('/scan-directory', (req, res) => {
   }
 
   try {
-    const filePaths = scanDirectory(directoryPath, extensionArray);
+    const filePaths = scanDirectory(directoryPath);
     const piiVulnerabilities = scanFiles(filePaths, regexPairs);
 
     res.json(piiVulnerabilities);
@@ -56,6 +52,7 @@ app.post('/scan-directory', (req, res) => {
     res.status(500).json({ error: 'Failed to scan directory', details: error.message });
   }
 });
+
 
 app.post('/github-repo-stats', async (req, res) => {
   const { owner, repo } = req.body;
