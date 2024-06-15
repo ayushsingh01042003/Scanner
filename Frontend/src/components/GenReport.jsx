@@ -1,4 +1,5 @@
-import Report from "./Report";
+import React from 'react';
+import Report from './Report';
 
 const GenReport = () => {
   const response = {
@@ -17,11 +18,12 @@ const GenReport = () => {
       "apiKey": ["AIzaSyD4EXAMPLE"]
     }
   };
+
   return (
     <div className="min-h-screen bg-gray-100 flex items-center justify-center">
       <Report data={response} />
     </div>
-  )
-}
+  );
+};
 
 export default GenReport;
