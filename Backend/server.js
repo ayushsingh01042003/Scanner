@@ -8,8 +8,10 @@ import cors from 'cors';
 import dotenv from "dotenv";
 import remainingRequest from './utils/request-remaining.js';
 import mailData from './utils/mail.js';
+import { ScanningActivity } from './models/scanner.model.js';
 dotenv.config();
-
+import db from './db.js';
+import { addNewRepo, createUser, getData, updateExistingUser } from './utils/utilsDB.js';
 const app = express();
 const port = 3000;
 
@@ -20,7 +22,7 @@ const octokit = new Octokit({ auth: process.env.GITHUB_TOKEN });
 
 app.post('/scan-github', async (req, res) => {
   const { owner, repo, regexPairs } = req.body;
-
+  
   try {
     const piiVulnerabilities = await scanGitHubRepository(owner, repo, regexPairs);
     res.json(piiVulnerabilities);
@@ -107,6 +109,26 @@ app.get('/remaining_request', async (req, res)=>{
   } catch(err){
     return res.send("Unable to Fetch Remaining Request")
   }
+})
+
+app.post('/save_data', async(req,res)=>{
+  const {owner, repo, piiVulnerabilities} = req.body;
+  const oldUserOldRepo = await updateExistingUser(owner, repo, piiVulnerabilities)
+  if (oldUserOldRepo){
+    return res.json(oldUserOldRepo)
+  }
+  const oldUserNewRepo = await addNewRepo(owner, repo, piiVulnerabilities)
+  if (oldUserNewRepo){
+    return res.json(oldUserNewRepo)
+  }
+  const newUser = await createUser(owner, repo, piiVulnerabilities)
+  return res.json(newUser)
+})
+
+app.get("/get_data", async (req,res) => {
+  const {owner, repo} = req.body;
+  const userData = await getData(owner, repo)
+  return res.json(userData)
 })
 
 
