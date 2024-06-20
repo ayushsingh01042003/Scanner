@@ -1,14 +1,20 @@
-import React from 'react'
-import './index.css'
-import GenReport from './components/GenReport'
-import Report from './components/Report'
-import Navbar from './components/navbar'
-import SideBar from './components/sidebar'
+import React from 'react';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import Layout from './components/Layout';
+import GenReport from './Pages/ReportsPage/ReportsPage';
 
 const App = () => {
   return (
-    <GenReport/>
-  )
-}
+    <>
+      <Router>
+        <Routes>
+          <Route path="/" element={<Layout />}>
+            <Route path="reports" element={<GenReport />} />
+          </Route>
+        </Routes>
+      </Router>
+    </>
+  );
+};
 
-export default App
+export default App;
