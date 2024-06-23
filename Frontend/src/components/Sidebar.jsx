@@ -20,7 +20,7 @@ const SideBar = () => {
           <details open>
             <summary>User Profile</summary>
             <ul>
-              <li><Link to="/">Overview</Link></li>
+              <li><Link to="/overview">Overview</Link></li>
               <li><Link to="/reports">Reports</Link></li>
             </ul>
           </details>
