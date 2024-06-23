@@ -18,7 +18,7 @@ const SideBar = () => {
             <summary className="cursor-pointer text-[#CCCCCC] hover:text-[#A8C5DA]">User Profile</summary>
             <ul className="ml-2 mt-2">
               <li>
-                <Link to="/" className="text-[#CCCCCC] hover:text-[#A8C5DA]">Overview</Link>
+                <Link to="/overview" className="text-[#CCCCCC] hover:text-[#A8C5DA]">Overview</Link>
               </li>
               <li>
                 <Link to="/reports" className="text-[#CCCCCC] hover:text-[#A8C5DA]">Reports</Link>
