@@ -1,27 +1,28 @@
-// SideBar.jsx
 import React from 'react';
 import { Link } from 'react-router-dom';
-import 'tailwindcss/tailwind.css';
-import 'daisyui/dist/full.css';
 
 const SideBar = () => {
   return (
-    <div className="fixed h-full w-56 bg-base-200 p-4">
+    <div className="fixed h-full w-56 bg-[#1C1C1C] text-[#CCCCCC] p-4 border-r-2 border-white">
       <div className="flex items-center mb-4">
         <div className="avatar placeholder">
-          <div className="bg-neutral text-neutral-content rounded-full w-8">
+          <div className="bg-gray-700 text-gray-400 rounded-full w-8">
             <span className="text-xs">UI</span>
           </div>
         </div>
-        <span className="ml-2">Username</span>
+        <span className="ml-2 text-[#CCCCCC]">Username</span>
       </div>
       <ul className="menu p-2 w-full">
         <li>
           <details open>
-            <summary>User Profile</summary>
-            <ul>
-              <li><Link to="/">Overview</Link></li>
-              <li><Link to="/reports">Reports</Link></li>
+            <summary className="cursor-pointer text-[#CCCCCC] hover:text-[#A8C5DA]">User Profile</summary>
+            <ul className="ml-2 mt-2">
+              <li>
+                <Link to="/" className="text-[#CCCCCC] hover:text-[#A8C5DA]">Overview</Link>
+              </li>
+              <li>
+                <Link to="/reports" className="text-[#CCCCCC] hover:text-[#A8C5DA]">Reports</Link>
+              </li>
             </ul>
           </details>
         </li>
