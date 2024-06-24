@@ -8,10 +8,10 @@ import cors from 'cors';
 import dotenv from "dotenv";
 import remainingRequest from './utils/request-remaining.js';
 import mailData from './utils/mail.js';
-// import { ScanningActivity } from './models/scanner.model.js';
+import Project from './models/project.model.js';
+import ScanReport from './models/scanReport.model.js';
+import connectToMongoDB from './db.js';
 dotenv.config();
-// import db from './db.js';
-import { addNewRepo, createUser, getData, updateExistingUser } from './utils/utilsDB.js';
 const app = express();
 const port = 3000;
 
@@ -102,7 +102,7 @@ app.post("/email",async (req, res) => {
   
 })
 
-app.get('/remaining_request', async (req, res)=>{
+app.get('/remaining_requests', async (req, res) => {
   try{
     const rem = await remainingRequest()
     res.send(`Number of Remaining Request: ${rem}`)
@@ -111,27 +111,66 @@ app.get('/remaining_request', async (req, res)=>{
   }
 })
 
-app.post('/save_data', async(req,res)=>{
-  const {owner, repo, piiVulnerabilities} = req.body;
-  const oldUserOldRepo = await updateExistingUser(owner, repo, piiVulnerabilities)
-  if (oldUserOldRepo){
-    return res.json(oldUserOldRepo)
+app.get('/getAllProjects', async (req, res) => {
+  try {
+    const projects = await Project.find()
+      .sort({ lastScanAt: -1 })
+      .limit(10)  // Limit to the 10 most recently scanned projects
+      .populate({
+        path: 'scans',
+        options: { sort: { timestamp: -1 }, limit: 1 }
+      });
+    
+    res.json(projects);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
   }
-  const oldUserNewRepo = await addNewRepo(owner, repo, piiVulnerabilities)
-  if (oldUserNewRepo){
-    return res.json(oldUserNewRepo)
+});
+
+app.get('/getReport/:reportId', async (req, res) => {
+  try {
+    const report = await ScanReport.findById(req.params.reportId)
+      .populate('project', 'projectName');
+    
+    if (!report) {
+      return res.status(404).json({ message: 'Report not found' });
+    }
+    
+    res.json(report);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
   }
-  const newUser = await createUser(owner, repo, piiVulnerabilities)
-  return res.json(newUser)
-})
+});
 
-app.get("/get_data", async (req,res) => {
-  const {owner, repo} = req.body;
-  const userData = await getData(owner, repo)
-  return res.json(userData)
-})
+app.post('/createReport', async (req, res) => {
+  const { projectName, username, reportData } = req.body;
 
+  try {
+    let project = await Project.findOne({ projectName });
+    
+    if (!project) {
+      project = new Project({ projectName });
+    }
+
+    const scanReport = new ScanReport({
+      username,
+      project: project._id,
+      reportData
+    });
+
+    await scanReport.save();
+
+    project.scans.push(scanReport._id);
+    project.lastScanAt = scanReport.timestamp;
+    await project.save();
+
+    res.status(201).json(scanReport);
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+});
 
 app.listen(port, () => {
+  connectToMongoDB();
   console.log(`Server is running on http://localhost:${port}`);
 });
