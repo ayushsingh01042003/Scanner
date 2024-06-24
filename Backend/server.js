@@ -102,7 +102,7 @@ app.post("/email",async (req, res) => {
   
 })
 
-app.get('/remaining_request', async (req, res) => {
+app.get('/remaining_requests', async (req, res) => {
   try{
     const rem = await remainingRequest()
     res.send(`Number of Remaining Request: ${rem}`)
@@ -111,7 +111,7 @@ app.get('/remaining_request', async (req, res) => {
   }
 })
 
-app.get(('/getAllProjects', async (req, res) => {
+app.get('/getAllProjects', async (req, res) => {
   try {
     const projects = await Project.find()
       .sort({ lastScanAt: -1 })
@@ -125,7 +125,7 @@ app.get(('/getAllProjects', async (req, res) => {
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
-}));
+});
 
 app.get('/getReport/:reportId', async (req, res) => {
   try {
