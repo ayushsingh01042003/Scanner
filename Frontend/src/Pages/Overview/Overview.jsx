@@ -10,7 +10,7 @@ const Overview = () => {
   const [url, setUrl] = useState('');
   const [keyValuePairs, setKeyValuePairs] = useState([{ key: '', value: '' }]);
   const [localItems, setLocalItems] = useState([]);
-  const [results, setResults] = useState('');
+
   const [numFiles, setNumFiles] = useState(0);
   const [repoInfo, setRepoInfo] = useState({
     Java: 0,
@@ -18,6 +18,10 @@ const Overview = () => {
     HTML: 0,
     JavaScript: 0,
   });
+const [scanStats, setScanStats] = useState({ totalFiles: 0, filesWithPII: 0 });
+  const [results, setResults] = useState({});
+
+  const [repoDetails, setRepoDetails] = useState({ owner: '', repo: '' });
 
   const generateColors = (count) => {
     const hueStep = 360 / count;
@@ -42,130 +46,165 @@ const Overview = () => {
   });
 
   useEffect(() => {
-  const topLanguages = Object.entries(repoInfo)
-    .sort(([, a], [, b]) => b - a)
-    .slice(0, 10); // Increase this number if you want to show more languages
+    const topLanguages = Object.entries(repoInfo)
+      .sort(([, a], [, b]) => b - a)
+      .slice(0, 10);
+  
+    const colors = generateColors(topLanguages.length);
+  
+    setChartData({
+      labels: topLanguages.map(([lang]) => lang),
+      datasets: [{
+        data: topLanguages.map(([, value]) => typeof value === 'number' ? value : parseFloat(value)),
+        backgroundColor: colors,
+        hoverBackgroundColor: colors
+      }]
+    });
+  }, [repoInfo]);
 
-  const colors = generateColors(topLanguages.length);
-
-  setChartData({
-    labels: topLanguages.map(([lang]) => lang),
-    datasets: [{
-      data: topLanguages.map(([, value]) => value),
-      backgroundColor: colors,
-      hoverBackgroundColor: colors
-    }]
-  });
-}, [repoInfo]);
-
-  const handleScanClick = () => {
+const handleScanClick = async () => {
+    let fetchPromise;
     console.log('Scan button clicked');
+    let response;
     if (scanOption === 'github') {
-      const mockNumFiles = localItems.length;
-      const mockResults = {
-      ssn: {
-        "/home/ayush/Progs/Cognizant/codebase/inner directory/vul.txt": ["777-45-6789"],
-        "/home/ayush/Progs/Cognizant/codebase/main.py": ["123-45-6789", "987-65-4321"],
-        "/home/ayush/Progs/Cognizant/codebase/user_data.py": ["123-45-6789", "987-65-4321"]
-      },
-      creditCard: {
-        "/home/ayush/Progs/Cognizant/codebase/inner directory/vul.txt": ["1234567890123456", "1234567890123456"],
-        "/home/ayush/Progs/Cognizant/codebase/user_data.py": ["1234567890123456"]
+        const response = await fetch('http://localhost:3000/github-repo-stats', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(repoDetails),
+        });
+
+        const scanResponse = await fetch('http://localhost:3000/scan-github', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              owner: repoDetails.owner,
+              repo: repoDetails.repo,
+              regexPairs: Object.fromEntries(keyValuePairs.map(pair => [pair.key, pair.value]))
+            }),
+          });
+        if (!scanResponse.ok) {
+            throw new Error('Failed to fetch repository stats');
+        }
+  
+        if (!response.ok) {
+          throw new Error('Failed to fetch repository stats');
+        }
+  
+        const data = await response.json();
+        setRepoInfo(data);
+
+        const scandata = await scanResponse.json();
+        // console.log("Scanned", scanResponse);
+        setResults(scandata);
+        // console.log("Raw API response:", scandata);
+        setNumFiles(Object.keys(scandata).length);
+        // console.log("Number of files scanned:", Object.keys(scandata).length);
+  
+        // Update chart data
+        const topLanguages = Object.entries(data)
+          .sort(([, a], [, b]) => b - a)
+          .slice(0, 10);
+  
+        const colors = generateColors(topLanguages.length);
+  
+        setChartData({
+          labels: topLanguages.map(([lang]) => lang),
+          datasets: [{
+            data: topLanguages.map(([, value]) => value),
+            backgroundColor: colors,
+            hoverBackgroundColor: colors
+          }]
+        });
+  
+        // Mock data for other fields (you may want to replace these with actual API calls as well)
+        // setNumFiles(mockNumFiles);
+        // setResults(mockResults);
+       
       }
-     };
-     const mockRepoInfo = {
-      Java: 20,
-      Python: 40,
-      HTML: 30,
-      JavaScript: 20,
-    };
-    setNumFiles(Object.keys(mockResults.ssn).length + Object.keys(mockResults.creditCard).length);
-    setResults(mockResults);
-    setRepoInfo(mockRepoInfo);
-    }
-    else if(scanOption === 'local')
-    {
-      const mockNumFiles = localItems.length;
-      const mockResults = {
-        "ssn": {
-        "/home/ayush/Progs/Cognizant/codebase/inner directory/vul.txt": [
-            "777-45-6789",
-            "666-45-6789",
-            "555-45-6789"
-        ],
-        "/home/ayush/Progs/Cognizant/codebase/inner directory/vul2.txt": [
-            "444-45-6789",
-            "333-45-6789",
-            "222-45-6789"
-        ],
-        "/home/ayush/Progs/Cognizant/codebase/main.py": [
-            "123-45-6789",
-            "987-65-4321"
-        ],
-        "/home/ayush/Progs/Cognizant/codebase/user_data.py": [
-            "123-45-6789",
-            "987-65-4321"
-        ]
-    },
-    "creditCard": {
-        "/home/ayush/Progs/Cognizant/codebase/inner directory/vul.txt": [
-            "1234567890123456",
-            "1234567890123456"
-        ],
-        "/home/ayush/Progs/Cognizant/codebase/user_data.py": [
-            "1234567890123456"
-        ]
+      else if (scanOption === 'local') {
+        if (!localDirectoryPath) {
+            throw new Error('No directory selected');
+          }
+        // const directoryPath = localItems[0]?.webkitRelativePath || localItems[0]?.path;
+        response = await fetch('http://localhost:3000/local-directory-stats', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ directoryPath: localDirectoryPath }),
+        });
       }
+  
+      if (!response.ok) {
+        throw new Error(`Failed to fetch ${scanOption} stats`);
+      }
+
+      const responsedata = await fetch('http://localhost:3000/scan-directory', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          directoryPath: localDirectoryPath,
+          regexPairs: Object.fromEntries(keyValuePairs.map(pair => [pair.key, pair.value]))
+        }),
+      });
+
+      if (!responsedata.ok) {
+        throw new Error('Failed to scan local directory');
+      }
+  
+      const data = await response.json();
+    //   console.log('API response:', data);
+
+      const scanData = await responsedata.json();
+        console.log("Scanned response:", scanData);
+        
+
+        const processedResults = Object.entries(scanData).reduce((acc, [piiType, files]) => {
+            Object.entries(files).forEach(([filePath, piiInstances]) => {
+              if (!acc[filePath]) {
+                acc[filePath] = 0;
+              }
+              acc[filePath] += piiInstances.length;
+            });
+            return acc;
+          }, {});
+
+          setResults(processedResults);
+        // setNumFiles(Object.keys(processedResults).length);
+        setNumFiles(Object.keys(scanData).reduce((sum, key) => sum + Object.keys(scanData[key]).length, 0));
+
+      if (data && Object.keys(data).length > 0) {
+        setRepoInfo(data);
+  
+      // Update chart data
+      const topLanguages = Object.entries(data)
+        .sort(([, a], [, b]) => b - a)
+        .slice(0, 10);
+  
+      const colors = generateColors(topLanguages.length);
+  
+      setChartData({
+        labels: topLanguages.map(([lang]) => lang),
+        datasets: [{
+          data: topLanguages.map(([, value]) => value),
+          backgroundColor: colors,
+          hoverBackgroundColor: colors
+        }]
+      });
+  
+      // Mock data for other fields (you may want to replace these with actual API calls as well)
+    }else{
+        console.error('Received empty or invalid data from the API');
     }
-    const mockRepoInfo = {
-      "1": 0.00263431351961832,
-      "": 16.19034626259665,
-      "sample": 0.012745836434859166,
-      "js": 41.41721543622033,
-      "json": 3.3355737594382844,
-      "mjs": 0.9202665720843901,
-      "ts": 10.768851287553764,
-      "map": 20.98794173298671,
-      "md": 2.0029862839043013,
-      "yml": 0.008903381606553146,
-      "gz": 0.005134328702942372,
-      "txt": 0.03730231441216397,
-      "cjs": 0.5168620994724071,
-      "markdown": 0.015811318297316974,
-      "bnf": 0.0013462456707069063,
-      "html": 0.00023597359494620246,
-      "flow": 0.27734183226852244,
-      "mts": 0.055196616216943856,
-      "tsx": 0.04930815070250291,
-      "snap": 0.03450597294025541,
-      "cts": 0.0488856818470347,
-      "node": 2.943184468992235,
-      "mdx": 0.24615960722205996,
-      "jst": 0.027085310212546253,
-      "def": 0.009113800457346189,
-      "closure-compiler": 0.006175548597693472,
-      "esprima": 0.0006693168096285144,
-      "bsd": 0.0013386336192570288,
-      "php": 0.0025081709527346356,
-      "pyc": 0.0036652027731160154,
-      "py": 0.0032666575079188576,
-      "coffee": 5.437179607055356e-7,
-      "css": 0.009451449310944325,
-      "lock": 0.056522744323104654,
-      "applescript": 0.0014631450322585963
-     };
-     const processedRepoInfo = {
-      Java: 0,
-      Python: mockRepoInfo.py || 0,
-      HTML: mockRepoInfo.html || 0,
-      JavaScript: mockRepoInfo.js || 0,
-    };
-    
-    setNumFiles(Object.keys(mockResults.ssn).length + Object.keys(mockResults.creditCard).length);
-    setResults(mockResults);
-    setRepoInfo(mockRepoInfo);
-  }
-  };
+};
+        
+      
 
   const handleAddKeyValuePair = () => {
     setKeyValuePairs([...keyValuePairs, { key: '', value: '' }]);
@@ -218,6 +257,8 @@ const Overview = () => {
     }
   };
 
+  const [localDirectoryPath, setLocalDirectoryPath] = useState('');
+
   const handleDragOver = (e) => {
     e.preventDefault();
   };
@@ -225,6 +266,10 @@ const Overview = () => {
   const handleFileInputChange = (e) => {
     const files = Array.from(e.target.files);
     setLocalItems(files);
+    if (files.length > 0) {
+        const directoryPath = files[0].webkitRelativePath.split('/')[0];
+        setLocalDirectoryPath(directoryPath);
+    }
   };
 
   return (
@@ -256,10 +301,16 @@ const Overview = () => {
           {scanOption === 'github' && (
             <div className="space-y-4">
               <input
-                type="text"
-                placeholder="URL"
-                value={url}
-                onChange={(e) => setUrl(e.target.value)}
+                    type="text"
+                    placeholder="GitHub Repository URL"
+                    value={url}
+                    onChange={(e) => {
+                        setUrl(e.target.value);
+                        const match = e.target.value.match(/github\.com\/([^/]+)\/([^/]+)/);
+                        if (match) {
+                        setRepoDetails({ owner: match[1], repo: match[2] });
+                        }
+                    }}
                 className="bg-[#282828] text-white rounded-lg py-4 px-4 w-full mb-2 focus:outline-none"
               />
               {keyValuePairs.map((pair, index) => (
@@ -302,67 +353,64 @@ const Overview = () => {
           )}
           {scanOption === 'local' && (
             <div className="mb-4" onDrop={handleDrop} onDragOver={handleDragOver}>
-              <div
-                className="bg-[#282828] text-white rounded-lg py-4 px-4 w-full focus:outline-none h-32 flex items-center justify-center border-dashed border-2 border-gray-600"
-              >
-                <label htmlFor="fileInput" className="cursor-pointer">
-                  Drop files or folders here or click to select
+                <div className="bg-[#282828] text-white rounded-lg py-4 px-4 w-full focus:outline-none h-32 flex flex-col items-center justify-center border-dashed border-2 border-gray-600">
+                <label htmlFor="fileInput" className="cursor-pointer text-center">
+                    {localDirectoryPath 
+                    ? <>
+                        <div>Selected Directory:</div>
+                        <div className="font-bold mt-2">{localDirectoryPath}</div>
+                        </>
+                    : 'Drop folder here or click to select'
+                    }
                 </label>
                 <input
-                  type="file"
-                  id="fileInput"
-                  className="hidden"
-                  onChange={handleFileInputChange}
-                  multiple
-                  webkitdirectory=""
-                  directory=""
+                    type="file"
+                    id="fileInput"
+                    className="hidden"
+                    onChange={handleFileInputChange}
+                    webkitdirectory=""
+                    directory=""
                 />
-              </div>
-              <div className="mt-2">
-                {localItems.map((item, index) => (
-                  <div key={index} className="bg-[#282828] text-white rounded-lg py-2 px-4 mb-2">
-                    {item.webkitRelativePath || item.name}
-                  </div>
-                ))}
-              </div>
-              {keyValuePairs.map((pair, index) => (
-                <div className="flex space-x-2 mb-2" key={index}>
-                  <input
+                </div>
+                {keyValuePairs.map((pair, index) => (
+                <div className="flex space-x-2 mb-2 mt-4" key={index}>
+                    <input
                     type="text"
                     placeholder="Key"
                     value={pair.key}
                     onChange={(e) =>
-                      handleKeyValuePairChange(index, 'key', e.target.value)
+                        handleKeyValuePairChange(index, 'key', e.target.value)
                     }
                     className="bg-[#282828] text-white rounded-lg py-4 px-4 flex-1 focus:outline-none"
-                  />
-                  <input
+                    />
+                    <input
                     type="text"
                     placeholder="Value"
                     value={pair.value}
                     onChange={(e) =>
-                      handleKeyValuePairChange(index, 'value', e.target.value)
+                        handleKeyValuePairChange(index, 'value', e.target.value)
                     }
                     className="bg-[#282828] text-white rounded-lg py-4 px-4 flex-1 focus:outline-none"
-                  />
-                  {keyValuePairs.length > 1 && (
+                    />
+                    {keyValuePairs.length > 1 && (
                     <button
-                      className="bg-[#282828] hover:bg-red-700 text-white py-2 px-4 rounded"
-                      onClick={() => handleRemoveKeyValuePair(index)}
+                        className="bg-[#282828] hover:bg-red-700 text-white py-2 px-4 rounded"
+                        onClick={() => handleRemoveKeyValuePair(index)}
                     >
-                      Remove
+                        Remove
                     </button>
-                  )}
+                    )}
                 </div>
-              ))}
-              <button
-                className="bg-[#282828] hover:bg-green-700 text-white py-2 px-4 rounded"
+                ))}
+                <button
+                className="bg-[#282828] hover:bg-green-700 text-white py-2 px-4 rounded mt-2"
                 onClick={handleAddKeyValuePair}
-              >
+                >
                 Add Key-Value Pair
-              </button>
+                </button>
             </div>
-          )}
+            )}
+
           <div className="flex justify-end mt-4">
             <button
               className="bg-[#A8C5DA] hover:bg-black hover:text-white text-black py-3 px-6 rounded-lg w-64 transition duration-300"
@@ -374,34 +422,47 @@ const Overview = () => {
         </div>
       </div>
 
-      <div className="flex flex-col md:flex-row gap-8">
+  <div className="flex flex-col md:flex-row gap-8">
   <div className="bg-[#2C2D2F] rounded-lg p-6 mb-8 flex-1 overflow-auto" style={{maxHeight: '500px'}}>
     <h2 className="text-xl mb-4 text-gray-300">Results</h2>
-    <p className="mb-2">Number of Files scanned - {numFiles}</p>
+    <p className="mb-2">Number of Files with PIIs found - {Object.keys(results).length}</p>
+    <div className="mt-4 flex justify-end">
+    <button
+      className="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded transition duration-300"
+      onClick={() => {
+        // Add your generate report logic here
+        console.log("Generate Report clicked");
+      }}
+    >
+      Generate Report
+    </button>
+    </div>
     <div className="overflow-x-auto">
       <table className="min-w-full bg-[#2C2D2F] border-collapse border-gray-600 shadow-md rounded-lg overflow-hidden">
         <thead className="bg-[#2C2D2F] text-gray-300">
           <tr>
-            <th className="py-2 px-4 border-b border-gray-600">PPI found</th>
-            <th className="py-2 px-4 border-b border-gray-600">PII type</th>
-            <th className="py-2 px-4 border-b border-gray-600">File path</th>
+          <th className="py-2 px-4 border-b border-gray-600">File path</th>
+          <th className="py-2 px-4 border-b border-gray-600">No. of PIIs found</th>
           </tr>
         </thead>
         <tbody className="text-gray-400">
-          {Object.keys(results).map((piiType) => {
-            return Object.keys(results[piiType]).map((filePath) => {
-              return results[piiType][filePath].map((pii, index) => (
-                <tr key={`${filePath}-${index}`}>
-                  <td className="py-2 px-4 border-b border-gray-600">{pii}</td>
-                  <td className="py-2 px-4 border-b border-gray-600">{piiType}</td>
-                  <td className="py-2 px-4 border-b border-gray-600">{filePath}</td>
-                </tr>
-              ));
-            });
-          })}
+        {Object.entries(results).map(([filePath, piiData]) => {
+            // Check if piiData is a number (count) or an object (detailed data)
+            const piiCount = typeof piiData === 'number' ? piiData : 
+            (Array.isArray(piiData) ? piiData.length : 
+            (typeof piiData === 'object' ? Object.values(piiData).flat().length : 0));
+
+            return (
+            <tr key={filePath}>
+                <td className="py-2 px-4 border-b border-gray-600">{filePath}</td>
+                <td className="py-2 px-4 border-b border-gray-600">{piiCount}</td>
+            </tr>
+            );
+           })}
         </tbody>
       </table>
     </div>
+    
   </div>
   <div className="bg-[#2C2D2F] rounded-lg p-6 flex-1" style={{height: '500px', overflow: 'auto'}}>
   <h2 className="text-xl mb-4 text-gray-300">Repository Info</h2>
@@ -414,7 +475,7 @@ const Overview = () => {
         {lang}: {typeof value === 'number' ? `${value.toFixed(2)}%` : value}
       </p>
     ))}
-    </div>
+</div>
     <div className="flex-grow flex items-center justify-center">
       <div style={{ width: '100%', maxWidth: '250px', height: '250px' }}>
         <Pie data={chartData} options={{ responsive: true, maintainAspectRatio: true }} />
