@@ -23,9 +23,13 @@ async function scanGitHubRepository(owner, repo, regexPairs) {
           });
           const fileContent = Buffer.from(fileContentResponse.data.content, 'base64').toString('utf-8');
           const filePiiVulnerabilities = scanFileContent(fileContent, regexPairs);
-          if (Object.keys(filePiiVulnerabilities).length > 0) {
-            piiVulnerabilities[item.path] = filePiiVulnerabilities;
-          }
+          
+          Object.entries(filePiiVulnerabilities).forEach(([piiType, matches]) => {
+            if (!piiVulnerabilities[piiType]) {
+              piiVulnerabilities[piiType] = {};
+            }
+            piiVulnerabilities[piiType][item.path] = matches;
+          });
         } else if (item.type === 'dir') {
           await scanDirectory(`${path}/${item.name}`);
         }
