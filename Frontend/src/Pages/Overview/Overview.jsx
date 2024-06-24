@@ -18,7 +18,7 @@ const Overview = () => {
     HTML: 0,
     JavaScript: 0,
   });
-
+const [scanStats, setScanStats] = useState({ totalFiles: 0, filesWithPII: 0 });
   const [results, setResults] = useState({});
 
   const [repoDetails, setRepoDetails] = useState({ owner: '', repo: '' });
@@ -422,10 +422,21 @@ const handleScanClick = async () => {
         </div>
       </div>
 
-      <div className="flex flex-col md:flex-row gap-8">
+  <div className="flex flex-col md:flex-row gap-8">
   <div className="bg-[#2C2D2F] rounded-lg p-6 mb-8 flex-1 overflow-auto" style={{maxHeight: '500px'}}>
     <h2 className="text-xl mb-4 text-gray-300">Results</h2>
-    <p className="mb-2">Number of Files scanned - {Object.keys(results).length}</p>
+    <p className="mb-2">Number of Files with PIIs found - {Object.keys(results).length}</p>
+    <div className="mt-4 flex justify-end">
+    <button
+      className="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded transition duration-300"
+      onClick={() => {
+        // Add your generate report logic here
+        console.log("Generate Report clicked");
+      }}
+    >
+      Generate Report
+    </button>
+    </div>
     <div className="overflow-x-auto">
       <table className="min-w-full bg-[#2C2D2F] border-collapse border-gray-600 shadow-md rounded-lg overflow-hidden">
         <thead className="bg-[#2C2D2F] text-gray-300">
@@ -447,10 +458,11 @@ const handleScanClick = async () => {
                 <td className="py-2 px-4 border-b border-gray-600">{piiCount}</td>
             </tr>
             );
-        })}
-</tbody>
+           })}
+        </tbody>
       </table>
     </div>
+    
   </div>
   <div className="bg-[#2C2D2F] rounded-lg p-6 flex-1" style={{height: '500px', overflow: 'auto'}}>
   <h2 className="text-xl mb-4 text-gray-300">Repository Info</h2>
