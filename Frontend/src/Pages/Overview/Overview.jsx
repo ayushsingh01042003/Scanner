@@ -63,8 +63,7 @@ const [scanStats, setScanStats] = useState({ totalFiles: 0, filesWithPII: 0 });
   }, [repoInfo]);
 
 const handleScanClick = async () => {
-    let fetchPromise;
-    console.log('Scan button clicked');
+
     let response;
     if (scanOption === 'github') {
         const response = await fetch('http://localhost:3000/github-repo-stats', {
@@ -119,51 +118,40 @@ const handleScanClick = async () => {
             hoverBackgroundColor: colors
           }]
         });
-  
-        // Mock data for other fields (you may want to replace these with actual API calls as well)
-        // setNumFiles(mockNumFiles);
-        // setResults(mockResults);
-       
       }
       else if (scanOption === 'local') {
         if (!localDirectoryPath) {
             throw new Error('No directory selected');
           }
-        // const directoryPath = localItems[0]?.webkitRelativePath || localItems[0]?.path;
-        response = await fetch('http://localhost:3000/local-directory-stats', {
+        const statsResponse = await fetch('http://localhost:3000/local-directory-stats', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({ directoryPath: localDirectoryPath }),
         });
-      }
   
-      if (!response.ok) {
-        throw new Error(`Failed to fetch ${scanOption} stats`);
+      if (!statsResponse.ok) {
+        throw new Error(`Failed to fetch local directory stats`);
       }
 
-      const responsedata = await fetch('http://localhost:3000/scan-directory', {
+      const scanResponse = await fetch('http://localhost:3000/scan-directory', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          directoryPath: localDirectoryPath,
-          regexPairs: Object.fromEntries(keyValuePairs.map(pair => [pair.key, pair.value]))
-        }),
-      });
+      directoryPath: localDirectoryPath,
+      regexPairs: Object.fromEntries(keyValuePairs.map(pair => [pair.key, pair.value]))
+      }),});
 
-      if (!responsedata.ok) {
+      if (!scanResponse.ok) {
         throw new Error('Failed to scan local directory');
       }
   
-      const data = await response.json();
-    //   console.log('API response:', data);
-
-      const scanData = await responsedata.json();
-        console.log("Scanned response:", scanData);
-        
+      const statsData = await statsResponse.json();
+      const scanData = await scanResponse.json();
+      setRepoInfo(statsData);
 
         const processedResults = Object.entries(scanData).reduce((acc, [piiType, files]) => {
             Object.entries(files).forEach(([filePath, piiInstances]) => {
@@ -178,10 +166,7 @@ const handleScanClick = async () => {
           setResults(processedResults);
         // setNumFiles(Object.keys(processedResults).length);
         setNumFiles(Object.keys(scanData).reduce((sum, key) => sum + Object.keys(scanData[key]).length, 0));
-
-      if (data && Object.keys(data).length > 0) {
-        setRepoInfo(data);
-  
+      
       // Update chart data
       const topLanguages = Object.entries(data)
         .sort(([, a], [, b]) => b - a)
@@ -262,16 +247,7 @@ const handleScanClick = async () => {
   const handleDragOver = (e) => {
     e.preventDefault();
   };
-
-  const handleFileInputChange = (e) => {
-    const files = Array.from(e.target.files);
-    setLocalItems(files);
-    if (files.length > 0) {
-        const directoryPath = files[0].webkitRelativePath.split('/')[0];
-        setLocalDirectoryPath(directoryPath);
-    }
-  };
-
+  
   return (
     <div className="bg-[#1C1C1C] text-white min-h-screen p-8 w-full overflow-hidden">
       <div className="mb-8">
@@ -344,7 +320,7 @@ const handleScanClick = async () => {
                 </div>
               ))}
               <button
-                className="bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded"
+                className="bg-[#282828] hover:bg-black text-white py-2 px-4 rounded"
                 onClick={handleAddKeyValuePair}
               >
                 Add Key-Value Pair
@@ -352,64 +328,52 @@ const handleScanClick = async () => {
             </div>
           )}
           {scanOption === 'local' && (
-            <div className="mb-4" onDrop={handleDrop} onDragOver={handleDragOver}>
-                <div className="bg-[#282828] text-white rounded-lg py-4 px-4 w-full focus:outline-none h-32 flex flex-col items-center justify-center border-dashed border-2 border-gray-600">
-                <label htmlFor="fileInput" className="cursor-pointer text-center">
-                    {localDirectoryPath 
-                    ? <>
-                        <div>Selected Directory:</div>
-                        <div className="font-bold mt-2">{localDirectoryPath}</div>
-                        </>
-                    : 'Drop folder here or click to select'
-                    }
-                </label>
+          <div className="mb-4">
+            <input
+              type="text"
+              placeholder="Enter local directory path"
+              value={localDirectoryPath}
+              onChange={(e) => setLocalDirectoryPath(e.target.value)}
+              className="bg-[#282828] text-white rounded-lg py-4 px-4 w-full mb-2 focus:outline-none"
+            />
+            {keyValuePairs.map((pair, index) => (
+              <div className="flex space-x-2 mb-2 mt-4" key={index}>
                 <input
-                    type="file"
-                    id="fileInput"
-                    className="hidden"
-                    onChange={handleFileInputChange}
-                    webkitdirectory=""
-                    directory=""
+                  type="text"
+                  placeholder="Key"
+                  value={pair.key}
+                  onChange={(e) =>
+                    handleKeyValuePairChange(index, 'key', e.target.value)
+                  }
+                  className="bg-[#282828] text-white rounded-lg py-4 px-4 flex-1 focus:outline-none"
                 />
-                </div>
-                {keyValuePairs.map((pair, index) => (
-                <div className="flex space-x-2 mb-2 mt-4" key={index}>
-                    <input
-                    type="text"
-                    placeholder="Key"
-                    value={pair.key}
-                    onChange={(e) =>
-                        handleKeyValuePairChange(index, 'key', e.target.value)
-                    }
-                    className="bg-[#282828] text-white rounded-lg py-4 px-4 flex-1 focus:outline-none"
-                    />
-                    <input
-                    type="text"
-                    placeholder="Value"
-                    value={pair.value}
-                    onChange={(e) =>
-                        handleKeyValuePairChange(index, 'value', e.target.value)
-                    }
-                    className="bg-[#282828] text-white rounded-lg py-4 px-4 flex-1 focus:outline-none"
-                    />
-                    {keyValuePairs.length > 1 && (
-                    <button
-                        className="bg-[#282828] hover:bg-red-700 text-white py-2 px-4 rounded"
-                        onClick={() => handleRemoveKeyValuePair(index)}
-                    >
-                        Remove
-                    </button>
-                    )}
-                </div>
-                ))}
-                <button
-                className="bg-[#282828] hover:bg-green-700 text-white py-2 px-4 rounded mt-2"
-                onClick={handleAddKeyValuePair}
-                >
-                Add Key-Value Pair
-                </button>
-            </div>
-            )}
+                <input
+                  type="text"
+                  placeholder="Value"
+                  value={pair.value}
+                  onChange={(e) =>
+                    handleKeyValuePairChange(index, 'value', e.target.value)
+                  }
+                  className="bg-[#282828] text-white rounded-lg py-4 px-4 flex-1 focus:outline-none"
+                />
+                {keyValuePairs.length > 1 && (
+                  <button
+                    className="bg-[#282828] hover:bg-red-700 text-white py-2 px-4 rounded"
+                    onClick={() => handleRemoveKeyValuePair(index)}
+                  >
+                    Remove
+                  </button>
+                )}
+              </div>
+            ))}
+            <button
+              className="bg-[#282828] hover:bg-green-700 text-white py-2 px-4 rounded mt-2"
+              onClick={handleAddKeyValuePair}
+            >
+              Add Key-Value Pair
+            </button>
+          </div>
+        )}
 
           <div className="flex justify-end mt-4">
             <button
@@ -441,8 +405,8 @@ const handleScanClick = async () => {
       <table className="min-w-full bg-[#2C2D2F] border-collapse border-gray-600 shadow-md rounded-lg overflow-hidden">
         <thead className="bg-[#2C2D2F] text-gray-300">
           <tr>
-          <th className="py-2 px-4 border-b border-gray-600">File path</th>
-          <th className="py-2 px-4 border-b border-gray-600">No. of PIIs found</th>
+          <th className="py-2 px-4 border-b border-gray-600 text-left w-3/4">File path</th>
+          <th className="py-2 px-4 border-b border-gray-600 text-right w-1/4">No. of PIIs found</th>
           </tr>
         </thead>
         <tbody className="text-gray-400">
@@ -454,8 +418,8 @@ const handleScanClick = async () => {
 
             return (
             <tr key={filePath}>
-                <td className="py-2 px-4 border-b border-gray-600">{filePath}</td>
-                <td className="py-2 px-4 border-b border-gray-600">{piiCount}</td>
+                <td className="py-2 px-4 border-b border-gray-600 text-left">{filePath}</td>
+                <td className="py-2 px-4 border-b border-gray-600 text-right">{piiCount}</td>
             </tr>
             );
            })}
@@ -468,17 +432,25 @@ const handleScanClick = async () => {
   <h2 className="text-xl mb-4 text-gray-300">Repository Info</h2>
   <div className="flex flex-col h-full">
   <div className="mb-4 max-h-64 overflow-y-auto">
-  {Object.entries(repoInfo)
-    .sort(([, a], [, b]) => b - a)
-    .map(([lang, value]) => (
-      <p key={lang} className="mb-2">
-        {lang}: {typeof value === 'number' ? `${value.toFixed(2)}%` : value}
-      </p>
-    ))}
-</div>
+      {Object.entries(repoInfo)
+        .sort(([, a], [, b]) => b - a)
+        .map(([lang, value]) => (
+        <p key={lang} className="mb-2">
+            {lang}: {typeof value === 'number' ? `${value.toFixed(2)}%` : value}
+          </p>
+      ))}
+    </div>
     <div className="flex-grow flex items-center justify-center">
       <div style={{ width: '100%', maxWidth: '250px', height: '250px' }}>
-        <Pie data={chartData} options={{ responsive: true, maintainAspectRatio: true }} />
+      <Pie data={chartData} options={{ 
+          responsive: true, 
+          maintainAspectRatio: true,
+          plugins: {
+            legend: {
+              position: 'bottom',
+            }
+          }
+        }} />
       </div>
     </div>
   </div>
