@@ -247,6 +247,57 @@ const handleScanClick = async () => {
   const handleDragOver = (e) => {
     e.preventDefault();
   };
+
+  // AI Model Implementation:
+
+  const [regexMessage, setRegexMessage] = useState('');
+  const [regexResponse, setRegexResponse] = useState('');
+  const [aiMessage, setAiMessage] = useState('');
+  const [aiResponse, setAiResponse] = useState('');
+
+  const handleRegexChat = async () => {
+    try {
+      const response = await fetch('http://localhost:3000/gemini-chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ message: regexMessage }),
+      });
+  
+      if (!response.ok) {
+        throw new Error('Failed to get response from Gemini');
+      }
+  
+      const data = await response.json();
+      setRegexResponse(data.response);
+    } catch (error) {
+      console.error('Error in Regex chat:', error);
+      setRegexResponse('Failed to get response from Gemini');
+    }
+  };
+  
+  const handleAiChat = async () => {
+    try {
+      const response = await fetch('http://localhost:3000/gemini-chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ message: aiMessage }),
+      });
+  
+      if (!response.ok) {
+        throw new Error('Failed to get response from Gemini');
+      }
+  
+      const data = await response.json();
+      setAiResponse(data.response);
+    } catch (error) {
+      console.error('Error in AI chat:', error);
+      setAiResponse('Failed to get response from Gemini');
+    }
+  };
   
   return (
     <div className="bg-[#1C1C1C] text-white min-h-screen p-8 w-full overflow-hidden">
@@ -385,6 +436,56 @@ const handleScanClick = async () => {
           </div>
         </div>
       </div>
+
+  {/* AI model Implementation */}
+
+  <div className="bg-[#1C1C1C] rounded-lg w-full p-6 mt-8">
+  <h2 className="text-xl mb-4 text-gray-300">Regex Pattern</h2>
+  <textarea
+    value={regexMessage}
+    onChange={(e) => setRegexMessage(e.target.value)}
+    placeholder="Enter the key value for which the regex pattern need to be found..."
+    className="bg-[#282828] text-white rounded-lg py-4 px-4 w-full mb-4 focus:outline-none"
+    rows="1"
+  />
+  <button
+    onClick={handleRegexChat}
+    className="bg-[#A8C5DA] hover:bg-black hover:text-white text-black py-3 px-6 rounded-lg transition duration-300"
+  >
+    Regex Pattern
+  </button>
+  {regexResponse && (
+    <div className="mt-4 bg-[#282828] text-white rounded-lg p-4">
+      <h3 className="text-lg mb-2">Regex Pattern:</h3>
+      <p>{regexResponse}</p>
+    </div>
+  )}
+  </div>
+
+  <div className="bg-[#1C1C1C] rounded-lg w-full p-6 mt-8">
+  <h2 className="text-xl mb-4 text-gray-300">AI ChatBot</h2>
+  <textarea
+    value={aiMessage}
+    onChange={(e) => setAiMessage(e.target.value)}
+    placeholder="Enter your message..."
+    className="bg-[#282828] text-white rounded-lg py-4 px-4 w-full mb-4 focus:outline-none"
+    rows="4"
+  />
+  <button
+    onClick={handleAiChat}
+    className="bg-[#A8C5DA] hover:bg-black hover:text-white text-black py-3 px-6 rounded-lg transition duration-300"
+  >
+    Send
+  </button>
+  {aiResponse && (
+    <div className="mt-4 bg-[#282828] text-white rounded-lg p-4">
+      <h3 className="text-lg mb-2">Model Response:</h3>
+      <p>{aiResponse}</p>
+    </div>
+  )}
+  </div>
+
+  {/* over */}
 
   <div className="flex flex-col md:flex-row gap-8">
   <div className="bg-[#2C2D2F] rounded-lg p-6 mb-8 flex-1 overflow-auto" style={{maxHeight: '500px'}}>
