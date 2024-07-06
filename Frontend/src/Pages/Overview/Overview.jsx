@@ -388,35 +388,35 @@ const handleScanClick = async () => {
               className="bg-[#282828] text-white rounded-lg py-4 px-4 w-full mb-2 focus:outline-none"
             />
             {keyValuePairs.map((pair, index) => (
-              <div className="flex space-x-2 mb-2 mt-4" key={index}>
-                <input
-                  type="text"
-                  placeholder="Key"
-                  value={pair.key}
-                  onChange={(e) =>
-                    handleKeyValuePairChange(index, 'key', e.target.value)
-                  }
-                  className="bg-[#282828] text-white rounded-lg py-4 px-4 flex-1 focus:outline-none"
-                />
-                <input
-                  type="text"
-                  placeholder="Value"
-                  value={pair.value}
-                  onChange={(e) =>
-                    handleKeyValuePairChange(index, 'value', e.target.value)
-                  }
-                  className="bg-[#282828] text-white rounded-lg py-4 px-4 flex-1 focus:outline-none"
-                />
-                {keyValuePairs.length > 1 && (
-                  <button
-                    className="bg-[#282828] hover:bg-red-700 text-white py-2 px-4 rounded"
-                    onClick={() => handleRemoveKeyValuePair(index)}
-                  >
-                    Remove
-                  </button>
-                )}
-              </div>
-            ))}
+  <div className="flex space-x-2 mb-2" key={index}>
+    <input
+      type="text"
+      placeholder="Key"
+      value={pair.key}
+      onChange={(e) =>
+        handleKeyValuePairChange(index, 'key', e.target.value)
+      }
+      className="bg-[#282828] text-white rounded-lg py-4 px-4 flex-1 focus:outline-none"
+    />
+    <input
+      type="text"
+      placeholder="Value (Regex Pattern)"
+      value={pair.value}
+      onChange={(e) =>
+        handleKeyValuePairChange(index, 'value', e.target.value)
+      }
+      className="bg-[#282828] text-white rounded-lg py-4 px-4 flex-1 focus:outline-none"
+    />
+    {keyValuePairs.length > 1 && (
+      <button
+        className="bg-[#282828] hover:bg-red-700 text-white py-2 px-4 rounded"
+        onClick={() => handleRemoveKeyValuePair(index)}
+      >
+        Remove
+      </button>
+    )}
+  </div>
+))}
             <button
               className="bg-[#282828] hover:bg-green-700 text-white py-2 px-4 rounded mt-2"
               onClick={handleAddKeyValuePair}
