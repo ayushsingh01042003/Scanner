@@ -85,7 +85,7 @@ ${formatScanDetails()}
     const url = window.URL.createObjectURL(data);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `report-${scanDetails._id}.txt`;
+    a.download = `report-${scanDetails._id}.pdf`;
     a.click();
   };
 
