@@ -8,7 +8,6 @@ const Overview = () => {
   const [scanOption, setScanOption] = useState('github');
   const [url, setUrl] = useState('');
   const [keyValuePairs, setKeyValuePairs] = useState([{ key: '', value: '' }]);
-  const [localItems, setLocalItems] = useState([]);
   const [numFiles, setNumFiles] = useState(0);
   const [repoInfo, setRepoInfo] = useState({
     Java: 0,
@@ -16,7 +15,6 @@ const Overview = () => {
     HTML: 0,
     JavaScript: 0,
   });
-  const [scanStats, setScanStats] = useState({ totalFiles: 0, filesWithPII: 0 });
   const [results, setResults] = useState({});
   const [repoDetails, setRepoDetails] = useState({ owner: '', repo: '' });
   const [projectName, setProjectName] = useState('');
@@ -199,8 +197,8 @@ const Overview = () => {
     }
 
     const reportData = {
-      statsData,
-      scanData
+      scanDetails: scanData,
+      stats: statsData
     };
 
     try {
@@ -220,8 +218,6 @@ const Overview = () => {
         throw new Error('Failed to generate report');
       }
 
-      const data = await response.json();
-      console.log('Report generated:', data);
       alert('Report generated successfully!');
     } catch (error) {
       console.error('Error generating report:', error);
