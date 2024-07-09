@@ -7,7 +7,7 @@ const SideBar = () => {
       <div className="flex items-center mb-4">
         <div className="avatar placeholder">
           <div className="bg-gray-700 text-gray-400 rounded-full w-8">
-            <span className="text-xs">UI</span>
+            <span className="text-xs">SS</span>
           </div>
         </div>
         <span className="ml-2 text-[#CCCCCC]">Username</span>
@@ -22,6 +22,9 @@ const SideBar = () => {
               </li>
               <li>
                 <Link to="/reports" className="text-[#CCCCCC] hover:text-[#A8C5DA]">Reports</Link>
+              </li>
+              <li>
+                <Link to="/Chatbot" className="text-[#CCCCCC] hover:text-[#A8C5DA]">Chatbot</Link>
               </li>
             </ul>
           </details>
