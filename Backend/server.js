@@ -11,6 +11,7 @@ import mailData from './utils/mail.js';
 import Project from './models/project.model.js';
 import ScanReport from './models/scanReport.model.js';
 import connectToMongoDB from './db.js';
+import autoPopulate from './utils/autoPopulate.js';
 dotenv.config();
 const app = express();
 const port = 3000;
@@ -169,6 +170,12 @@ app.post('/createReport', async (req, res) => {
     res.status(400).json({ message: error.message });
   }
 });
+
+app.post("/regexValue",async (req,res) => {
+  const {data} = req.body;
+  const response = await autoPopulate(data)
+  return res.json(response)
+})
 
 app.listen(port, () => {
   connectToMongoDB();
