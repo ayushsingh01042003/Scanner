@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Pie } from 'react-chartjs-2';
 import { Chart as ChartJS, ArcElement, Tooltip, Legend } from 'chart.js';
 
@@ -44,6 +44,54 @@ const Overview = () => {
     };
   });
 
+  const debounceTimeouts = useRef({});
+
+  const handleKeyValuePairChange = (index, keyOrValue, newValue) => {
+    const updatedKeyValuePairs = [...keyValuePairs];
+    updatedKeyValuePairs[index] = {
+      ...updatedKeyValuePairs[index],
+      [keyOrValue]: newValue
+    };
+    setKeyValuePairs(updatedKeyValuePairs);
+
+    if (keyOrValue === 'key') {
+      if (debounceTimeouts.current[index]) {
+        clearTimeout(debounceTimeouts.current[index]);
+      }
+      debounceTimeouts.current[index] = setTimeout(async () => {
+        if (newValue !== '') {
+          try {
+            const response = await fetch('http://localhost:3000/regexValue', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({ data: newValue })
+            });
+
+            if (!response.ok) {
+              throw new Error('Failed to fetch data');
+            }
+
+            const data = await response.json();
+
+            const updatedPairs = [...keyValuePairs];
+            updatedPairs[index] = { ...updatedPairs[index], key: newValue, value: data };
+            setKeyValuePairs(updatedPairs);
+          } catch (error) {
+            console.error('API Error:', error);
+          }
+        }
+      }, 1000);
+    }
+  };
+
+  useEffect(() => {
+    return () => {
+      Object.values(debounceTimeouts.current).forEach(timeout => clearTimeout(timeout));
+    };
+  }, []);
+  
   useEffect(() => {
     const topLanguages = Object.entries(repoInfo)
       .sort(([, a], [, b]) => b - a)
@@ -71,7 +119,6 @@ const Overview = () => {
           },
           body: JSON.stringify(repoDetails),
         });
-
         const scanResponse = await fetch('http://localhost:3000/scan-github', {
           method: 'POST',
           headers: {
@@ -90,7 +137,7 @@ const Overview = () => {
 
         const data = await response.json();
         const scandata = await scanResponse.json();
-
+        
         setStatsData(data);
         setScanData(scandata);
         setRepoInfo(data);
@@ -209,7 +256,7 @@ const Overview = () => {
         },
         body: JSON.stringify({
           projectName,
-          username: 'hardcodeduser', // Hardcoded username as requested
+          username: 'hardcodeduser',
           reportData,
         }),
       });
@@ -236,13 +283,7 @@ const Overview = () => {
     }
   };
 
-  const handleKeyValuePairChange = (index, field, value) => {
-    const newKeyValuePairs = keyValuePairs.map((pair, idx) =>
-      idx === index ? { ...pair, [field]: value } : pair
-    );
-    setKeyValuePairs(newKeyValuePairs);
-  };
-
+  
   return (
     <div className="bg-[#1C1C1C] text-white min-h-screen p-8 w-full overflow-hidden">
       <div className="mb-8">
@@ -391,7 +432,7 @@ const Overview = () => {
       <div className="flex flex-col md:flex-row gap-8">
         <div className="bg-[#2C2D2F] rounded-lg p-6 mb-8 flex-1 overflow-auto" style={{maxHeight: '500px'}}>
           <h2 className="text-xl mb-4 text-gray-300">Results</h2>
-          <p className="mb-2">Number of Files with PIIs found - {Object.keys(results).length}</p>
+          <p className="mb-2">Number of Files with PIIs found - {numFiles}</p>
           <div className="mt-4 flex justify-end">
             <button
               className="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded transition duration-300"
