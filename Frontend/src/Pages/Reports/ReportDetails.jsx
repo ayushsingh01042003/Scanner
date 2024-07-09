@@ -35,9 +35,18 @@ const ReportDetails = () => {
     try {
       setLoading(true);
       const response = await axios.get(`http://localhost:3000/getReport/${scanId}`);
-      setScanDetails(response.data);
+      const scanData = response.data;
+      
+      // Fetch project details if not included in the scan data
+      if (scanData.project && typeof scanData.project === 'string') {
+        const projectResponse = await axios.get(`http://localhost:3000/getProject/${scanData.project}`);
+        scanData.project = projectResponse.data;
+      }
+  
+      setScanDetails(scanData);
       setLoading(false);
     } catch (err) {
+      console.error('Error fetching scan details:', err);
       setError('Failed to fetch scan details');
       setLoading(false);
     }
@@ -45,9 +54,9 @@ const ReportDetails = () => {
 
   const formatScanDetails = () => {
     if (!scanDetails) return '';
-
+  
     let formattedDetails = '';
-
+  
     if (scanDetails.reportData) {
       if (scanDetails.reportData.scanDetails) {
         formattedDetails += 'Vulnerabilities:\n';
@@ -59,7 +68,7 @@ const ReportDetails = () => {
           formattedDetails += '\n';
         });
       }
-
+  
       if (scanDetails.reportData.stats) {
         formattedDetails += 'Language Statistics:\n';
         Object.entries(scanDetails.reportData.stats).forEach(([language, percentage]) => {
@@ -67,20 +76,21 @@ const ReportDetails = () => {
         });
       }
     }
-
+  
     return formattedDetails;
   };
 
   const handleDownloadReport = () => {
-    if (!scanDetails) return;
-
+    if (!scanDetails || !scanDetails.project) return;
+  
     const formattedDetails = `
-Username: ${scanDetails.username}
-Project: ${projects.find(p => p._id === scanDetails.project)?.projectName}
-Timestamp: ${scanDetails.timestamp}
-
-${formatScanDetails()}
-`;
+  Username: ${scanDetails.username}
+  Project: ${scanDetails.project.projectName}
+  Timestamp: ${scanDetails.timestamp}
+  
+  ${formatScanDetails()}
+  `;
+  
     const data = new Blob([formattedDetails], { type: 'text/plain' });
     const url = window.URL.createObjectURL(data);
     const a = document.createElement('a');
@@ -129,10 +139,10 @@ ${formatScanDetails()}
       <section className="flex-1 bg-[#2C2C2E] text-white p-4 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-gray-800" style={{ maxHeight: '100vh', minHeight: 0 }}>
         <h2 className="text-lg text-gray-300 mb-4">Scan Details</h2>
         <div className="bg-[#1C1C1C] p-4 rounded-lg text-gray-300">
-          {scanDetails ? (
+          {scanDetails && scanDetails.project ? (
             <pre className="whitespace-pre-wrap">
               <strong>Username:</strong> {scanDetails.username}<br/>
-              <strong>Project:</strong> {projects.find(p => p._id === scanDetails.project)?.projectName}<br/>
+              <strong>Project:</strong> {scanDetails.project.projectName}<br/>
               <strong>Timestamp:</strong> {new Date(scanDetails.timestamp).toLocaleString()}
               <br/>
               <br/>

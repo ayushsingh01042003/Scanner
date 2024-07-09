@@ -28,7 +28,7 @@ const Chatbot = () => {
 
   return (
     <div className="bg-[#1C1C1C] rounded-lg w-full p-6 mt-8">
-      <h2 className="text-xl mb-4 text-gray-300">Scanner Chatbot</h2>
+      <h2 className="text-xl mb-4 text-gray-300">Cognizant Chatbot</h2>
       <textarea
         value={chatMessage}
         onChange={(e) => setChatMessage(e.target.value)}

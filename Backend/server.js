@@ -120,7 +120,7 @@ app.get('/getAllProjects', async (req, res) => {
       .limit(10)  // Limit to the 10 most recently scanned projects
       .populate({
         path: 'scans',
-        options: { sort: { timestamp: -1 }, limit: 1 }
+        options: { sort: { timestamp: -1 }}
       });
     
     res.json(projects);
