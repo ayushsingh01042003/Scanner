@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 
 const SideBar = () => {
   return (
-    <div className="fixed h-full w-56 bg-[#1C1C1C] text-[#CCCCCC] p-4 border-r-2 border-white">
+    <div className="fixed h-full w-56 bg-[#1C1C1C] text-[#CCCCCC] p-4 border-r-[0.5px] border-white rounded-2xl">
       <div className="flex items-center mb-4">
         <div className="avatar placeholder">
           <div className="bg-gray-700 text-gray-400 rounded-full w-8">

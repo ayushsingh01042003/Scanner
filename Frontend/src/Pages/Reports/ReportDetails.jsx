@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import jsPDF from 'jspdf';
 
 const ReportDetails = () => {
   const [projects, setProjects] = useState([]);
@@ -83,86 +84,92 @@ const ReportDetails = () => {
   const handleDownloadReport = () => {
     if (!scanDetails || !scanDetails.project) return;
   
-    const formattedDetails = `
-  Username: ${scanDetails.username}
-  Project: ${scanDetails.project.projectName}
-  Timestamp: ${scanDetails.timestamp}
+    const formattedDetails = 
+    `Username: ${scanDetails.username}
+    Project: ${scanDetails.project.projectName}
+    Timestamp: ${scanDetails.timestamp}
+    
+    ${formatScanDetails()}
+    ;`
   
-  ${formatScanDetails()}
-  `;
+    const doc = new jsPDF();
+    doc.setFontSize(10);
+    doc.text(formattedDetails, 10, 10);
   
-    const data = new Blob([formattedDetails], { type: 'text/plain' });
-    const url = window.URL.createObjectURL(data);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `report-${scanDetails._id}.pdf`;
-    a.click();
+    doc.save(`report-${scanDetails._id}.pdf`);
   };
 
   if (loading) return <div>Loading...</div>;
   if (error) return <div>{error}</div>;
 
   return (
-    <div className="flex w-full h-full">
-      <section className="w-1/3 bg-[#1C1C1C] text-white p-4 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-gray-800" style={{ maxHeight: '100vh', minHeight: 0 }}>
-        <h2 className="text-lg text-gray-300 mb-4">Recent Projects</h2>
-        <ul>
-          {projects.map(project => (
-            <li key={project._id} className="mb-4">
-              <div
-                className={`cursor-pointer hover:text-white p-2 rounded ${project._id === selectedProjectId ? 'bg-gray-700 text-white' : 'text-gray-400'}`}
-                onClick={() => setSelectedProjectId(project._id)}
-              >
-                <div>{project.projectName}</div>
-                <div className="text-sm text-gray-500">{new Date(project.createdAt).toLocaleString()}</div>
-              </div>
-              {project._id === selectedProjectId && (
-                <ul className="ml-4 mt-2">
-                  {project.scans.map(scan => (
-                    <li
-                      key={scan._id}
-                      className={`cursor-pointer hover:text-white p-1 rounded ${scan._id === selectedScanId ? 'bg-gray-600 text-white' : 'text-gray-500'}`}
-                      onClick={() => setSelectedScanId(scan._id)}
-                    > 
-                      Scan: {new Date(scan.timestamp).toLocaleString()}
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </li>
-          ))}
-        </ul>
-      </section>
+    <>
+    <div className="flex flex-col w-full">
+      <div className="w-full block p-8">
+        <h1 className="text-lg text-[#a4ff9e]">Scanner</h1>
+        <h1 className="text-4xl font-bold text-white mb-6">Reports</h1>
+      </div>
+      <div className="flex w-[95%] h-full mx-auto ">
+        <section className="w-1/3 bg-[#2C2D2F] text-white p-6 mb-4 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-gray-800 rounded-lg" style={{ maxHeight: '100vh', minHeight: 0 }}>
+          <h2 className="text-xl mb-4 text-grey-300 mb-4">Recent Projects</h2>
+          <ul>
+            {projects.map(project => (
+              <li key={project._id} className="mb-4">
+                <div
+                  className={`cursor-pointer hover:text-white p-2 rounded ${project._id === selectedProjectId ? 'bg-[#1c1c1c] text-white' : 'text-gray-400'}`}
+                  onClick={() => setSelectedProjectId(project._id)}
+                >
+                  <div>{project.projectName}</div>
+                  <div className="text-sm text-gray-500">{new Date(project.createdAt).toLocaleString()}</div>
+                </div>
+                {project._id === selectedProjectId && (
+                  <ul className="ml-4 mt-2">
+                    {project.scans.map(scan => (
+                      <li
+                        key={scan._id}
+                        className={`cursor-pointer hover:text-white p-1 rounded ${scan._id === selectedScanId ? 'bg-[#121212] text-white' : 'text-gray-500'}`}
+                        onClick={() => setSelectedScanId(scan._id)}
+                      > 
+                        Scan: {new Date(scan.timestamp).toLocaleString()}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </li>
+            ))}
+          </ul>
+        </section>
 
-      <div className="w-px bg-gray-600"></div>
+        <div className="w-px bg-[#121212] w-[20px]"></div>
 
-      <section className="flex-1 bg-[#2C2C2E] text-white p-4 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-gray-800" style={{ maxHeight: '100vh', minHeight: 0 }}>
-        <h2 className="text-lg text-gray-300 mb-4">Scan Details</h2>
-        <div className="bg-[#1C1C1C] p-4 rounded-lg text-gray-300">
-          {scanDetails && scanDetails.project ? (
-            <pre className="whitespace-pre-wrap">
-              <strong>Username:</strong> {scanDetails.username}<br/>
-              <strong>Project:</strong> {scanDetails.project.projectName}<br/>
-              <strong>Timestamp:</strong> {new Date(scanDetails.timestamp).toLocaleString()}
-              <br/>
-              <br/>
-              <strong>Vulnerabilities Found and Language Statistics:</strong><br/>
-              {formatScanDetails()}
-            </pre>
-          ) : (
-            <p>Select a project and scan to view details</p>
+        <section className="flex-1 bg-[#2C2D2F] text-white p-6 mb-4 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-gray-800 rounded-lg mb-4" style={{ maxHeight: '100vh', minHeight: 0 }}>
+          <h2 className="text-xl mb-4 text-grey-300 mb-4">Scan Details</h2>
+          <div className="bg-[#1C1C1C] p-4 rounded-lg text-gray-300">
+            {scanDetails && scanDetails.project ? (
+              <pre className="whitespace-pre-wrap">
+                <strong>Username:</strong> {scanDetails.username}<br/>
+                <strong>Project:</strong> {scanDetails.project.projectName}<br/>
+                <strong>Timestamp:</strong> {new Date(scanDetails.timestamp).toLocaleString()}
+                <br/>
+                <br/>
+                <strong>Vulnerabilities Found and Language Statistics:</strong><br/>
+                {formatScanDetails()}
+              </pre>
+            ) : (
+              <p>Select a project and scan to view details</p>
+            )}
+          </div>
+          {scanDetails && (
+            <button
+              className="mt-4 p-2 bg-[#a4ff9e] hover:bg-black hover:text-[#a4ff9e] text-black py-3 px-6 rounded-lg w-64 transition duration-300 font-bold transition duration-300"
+              onClick={handleDownloadReport}
+            >
+              Download Report
+            </button>
           )}
-        </div>
-        {scanDetails && (
-          <button
-            className="mt-4 p-2 bg-[#A8C5DA] hover:bg-black hover:text-white text-black rounded transition duration-300"
-            onClick={handleDownloadReport}
-          >
-            Download Report
-          </button>
-        )}
-      </section>
-    </div>
+        </section>
+      </div>
+    </div></>
   );
 };
 
