@@ -140,7 +140,7 @@ const ReportDetails = () => {
           </ul>
         </section>
 
-        <div className="w-px bg-[#121212] w-[20px]"></div>
+        <div className="bg-[#121212] w-[20px]"></div>
 
         <section className="flex-1 bg-[#2C2D2F] text-white p-6 mb-4 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-gray-800 rounded-lg mb-4" style={{ maxHeight: '100vh', minHeight: 0 }}>
           <h2 className="text-xl mb-4 text-grey-300 mb-4">Scan Details</h2>
