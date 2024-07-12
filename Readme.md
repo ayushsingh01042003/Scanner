@@ -69,7 +69,7 @@ npm run start
 * [Questions](#questions-)
 * [Example](#example-)
 
-## Dependencies⚙️
+## Dependencies ⚙️
 
 To install dependencies, run these commands:
 
@@ -90,7 +90,7 @@ npm i express
 npm i octokit
 npm install @google-ai/generativelanguage
 ```
-## Usage 
+## Usage ⚒️
 
 The proper usage of this repository involves the following steps:
 
