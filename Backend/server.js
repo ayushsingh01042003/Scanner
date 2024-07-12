@@ -12,6 +12,7 @@ import Project from './models/project.model.js';
 import ScanReport from './models/scanReport.model.js';
 import connectToMongoDB from './db.js';
 import autoPopulate from './utils/autoPopulate.js';
+import mongoose from 'mongoose';
 dotenv.config();
 const app = express();
 const port = 3000;
@@ -171,7 +172,81 @@ app.post('/createReport', async (req, res) => {
   }
 });
 
-app.post("/regexValue",async (req,res) => {
+app.delete('/deleteProject/:projectId', async (req, res) => {
+  const { projectId } = req.params
+
+  const session = await mongoose.startSession()
+  session.startTransaction()
+
+  try {
+    const project = await Project.findById(projectId).session(session)
+    if(!project) {
+      await session.abortTransaction()
+      session.endSession()
+      res.status(404).send({
+        msg: "Project Not found for the Id given"
+      })
+      return
+    }
+
+    await ScanReport.deleteMany({ project: projectId }).session(session)
+    await Project.findByIdAndDelete(projectId).session(session)
+
+    await session.commitTransaction();
+    session.endSession();
+
+    res.status(200).send({
+      msg: "This project and its associated scans have been deleted"
+    })
+
+  } catch (err) {
+    await session.abortTransaction();
+    session.endSession();
+    
+    res.status(500).send({
+      msg: "Something went wrong",
+      error : err.message
+    })
+  }
+})
+
+app.delete('/deleteScan/:scanId', async (req, res) => {
+  const { scanId } = req.params
+
+  try {
+    const scan = await ScanReport.findById(scanId);
+    if(!scan) {
+      res.status(404).send({
+        msg: "Scan does not exist"
+      })
+      return
+    }
+
+    const project = await Project.findById(scan.project)
+    if(!project) {
+      res.status(404).send({
+        msg: "Project Not found"
+      })
+      return
+    }
+
+    project.scans = project.scans.filter(id => !id.equals(scanId))
+    await project.save()
+
+    await ScanReport.findByIdAndDelete(scanId)
+    res.status(200).send({
+      msg: "Scan deleted Successfully"
+    })
+
+  } catch(error) {
+    res.status(500).send({
+      msg: "Error Occured",
+      error: error.message
+    })
+  }
+})
+
+app.post("/regexValue", async (req, res) => {
   const {data} = req.body;
   const response = await autoPopulate(data)
   return res.json(response)
