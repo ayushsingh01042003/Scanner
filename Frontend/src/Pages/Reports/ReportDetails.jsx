@@ -111,7 +111,7 @@ const ReportDetails = () => {
       </div>
       <div className="flex w-[95%] h-full mx-auto ">
         <section className="w-1/3 bg-[#2C2D2F] text-white p-6 mb-4 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-gray-800 rounded-lg" style={{ maxHeight: '100vh', minHeight: 0 }}>
-          <h2 className="text-xl mb-4 text-grey-300 mb-4">Recent Projects</h2>
+          <h2 className="text-xl mb-4 text-grey-300">Recent Projects</h2>
           <ul>
             {projects.map(project => (
               <li key={project._id} className="mb-4">
@@ -142,8 +142,8 @@ const ReportDetails = () => {
 
         <div className="bg-[#121212] w-[20px]"></div>
 
-        <section className="flex-1 bg-[#2C2D2F] text-white p-6 mb-4 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-gray-800 rounded-lg mb-4" style={{ maxHeight: '100vh', minHeight: 0 }}>
-          <h2 className="text-xl mb-4 text-grey-300 mb-4">Scan Details</h2>
+        <section className="flex-1 bg-[#2C2D2F] text-white p-6 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-gray-800 rounded-lg mb-4" style={{ maxHeight: '100vh', minHeight: 0 }}>
+          <h2 className="text-xl mb-4 text-grey-300">Scan Details</h2>
           <div className="bg-[#1C1C1C] p-4 rounded-lg text-gray-300">
             {scanDetails && scanDetails.project ? (
               <pre className="whitespace-pre-wrap">
@@ -161,7 +161,7 @@ const ReportDetails = () => {
           </div>
           {scanDetails && (
             <button
-              className="mt-4 p-2 bg-[#a4ff9e] hover:bg-black hover:text-[#a4ff9e] text-black py-3 px-6 rounded-lg w-64 transition duration-300 font-bold transition duration-300"
+              className="mt-4 p-2 bg-[#a4ff9e] hover:bg-black hover:text-[#a4ff9e] text-black py-3 px-6 rounded-lg w-64 transition duration-300 font-bold"
               onClick={handleDownloadReport}
             >
               Download Report
