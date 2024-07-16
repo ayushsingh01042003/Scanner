@@ -10,13 +10,19 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@google-ai/generativelanguage": "^2.6.0",
     "axios": "^1.7.2",
     "chart.js": "^4.4.3",
+    "grommet-icons": "^4.12.1",
     "jspdf": "^2.5.1",
     "ldrs": "^1.0.2",
+    "mdb": "^0.1.0",
+    "mdb-react-ui-kit": "^8.0.0",
+    "mdbreact": "^5.2.0",
     "react": "^18.2.0",
     "react-chartjs-2": "^5.2.0",
     "react-dom": "^18.2.0",
+    "react-icons": "^5.2.1",
     "react-router-dom": "^6.23.1"
   },
   "devDependencies": {
