@@ -93,15 +93,16 @@ app.post('/local-directory-stats', async (req, res) => {
   }
 });
 
-app.post("/email",async (req, res) => {
-  const {jsonData,receiverEmail} = req.body
-  try{
+app.post("/email", async (req, res) => {
+  console.log("Received email request:", req.body);
+  const {jsonData, receiverEmail} = req.body
+  try {
     const result = await mailData(jsonData, receiverEmail)
-    return res.send(result)
-  } catch(err){
-    return res.send("Unable to send email")
+    return res.status(200).json({ message: "Email sent successfully", result })
+  } catch(err) {
+    console.error("Error sending email:", err)
+    return res.status(500).json({ error: "Unable to send email" })
   }
-  
 })
 
 app.get('/remaining_requests', async (req, res) => {
