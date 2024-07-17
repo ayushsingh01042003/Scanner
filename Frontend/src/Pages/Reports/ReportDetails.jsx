@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import jsPDF from 'jspdf';
 import EmailModal from '../../components/EmailModal';
+import { MdDelete } from 'react-icons/md'; // Import the delete icon from react-icons/md
 
 const ReportDetails = () => {
   const [projects, setProjects] = useState([]);
@@ -124,48 +125,106 @@ const ReportDetails = () => {
     }
   };
 
+  const handleDeleteProject = async (projectId) => {
+    if (window.confirm('Are you sure you want to delete this project? This action will delete all scans associated with the project.')) {
+      try {
+        await axios.delete(`http://localhost:3000/deleteProject/${projectId}`);
+        setProjects(projects.filter(project => project._id !== projectId));
+        setSelectedProjectId(null);
+        setSelectedScanId(null);
+        setScanDetails(null);
+      } catch (error) {
+        console.error('Error deleting project:', error);
+        alert('Failed to delete project. Please try again.');
+      }
+    }
+  };
+
+  const handleDeleteScan = async (scanId) => {
+    if (window.confirm('Are you sure you want to delete this scan?')) {
+      try {
+        await axios.delete(`http://localhost:3000/deleteScan/${scanId}`);
+        setProjects(projects.map(project => {
+          if (project._id === selectedProjectId) {
+            project.scans = project.scans.filter(scan => scan._id !== scanId);
+          }
+          return project;
+        }));
+        setSelectedScanId(null);
+        setScanDetails(null);
+      } catch (error) {
+        console.error('Error deleting scan:', error);
+        alert('Failed to delete scan. Please try again.');
+      }
+    }
+  };
+
   if (loading) return <div>Loading...</div>;
   if (error) return <div>{error}</div>;
 
   return (
     <>
-    <div className="flex flex-col w-full">
-      <div className="w-full block p-8">
-        <h1 className="text-lg text-[#a4ff9e]">Scanner</h1>
-        <h1 className="text-4xl font-bold text-white mb-6">Reports</h1>
-      </div>
-      <div className="flex w-[95%] h-full mx-auto ">
-        <section className="w-1/3 bg-[#2C2D2F] text-white p-6 mb-4 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-gray-800 rounded-lg" style={{ maxHeight: '100vh', minHeight: 0 }}>
-          <h2 className="text-xl mb-4 text-grey-300">Recent Projects</h2>
-          <ul>
-            {projects.map(project => (
-              <li key={project._id} className="mb-4">
-                <div
-                  className={`cursor-pointer hover:text-white p-2 rounded ${project._id === selectedProjectId ? 'bg-[#1c1c1c] text-white' : 'text-gray-400'}`}
-                  onClick={() => setSelectedProjectId(project._id)}
-                >
-                  <div>{project.projectName}</div>
-                  <div className="text-sm text-gray-500">{new Date(project.createdAt).toLocaleString()}</div>
-                </div>
-                {project._id === selectedProjectId && (
-                  <ul className="ml-4 mt-2">
-                    {project.scans.map(scan => (
-                      <li
-                        key={scan._id}
-                        className={`cursor-pointer hover:text-white p-1 rounded ${scan._id === selectedScanId ? 'bg-[#121212] text-white' : 'text-gray-500'}`}
-                        onClick={() => setSelectedScanId(scan._id)}
-                      > 
-                        Scan: {new Date(scan.timestamp).toLocaleString()}
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </li>
-            ))}
-          </ul>
-        </section>
+      <div className="flex flex-col w-full">
+        <div className="w-full block p-8">
+          <h1 className="text-lg text-[#a4ff9e]">Scanner</h1>
+          <h1 className="text-4xl font-bold text-white mb-6">Reports</h1>
+        </div>
+        <div className="flex w-[95%] h-full mx-auto">
+          <section className="w-1/3 bg-[#2C2D2F] text-white p-6 mb-4 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-gray-800 rounded-lg" style={{ maxHeight: '100vh', minHeight: 0 }}>
+            <h2 className="text-xl mb-4 text-grey-300">Recent Projects</h2>
+            <ul>
+              {projects.map(project => (
+                <li key={project._id} className="mb-4">
+                  <div
+                    className={`cursor-pointer hover:text-white p-2 rounded flex items-center justify-between ${project._id === selectedProjectId ? 'bg-[#1c1c1c] text-white' : 'text-gray-400'}`}
+                    onClick={() => setSelectedProjectId(project._id)}
+                  >
+                    <div className="flex-1">
+                      <div className="flex items-center">
+                        <div>{project.projectName}</div>
+                      </div>
+                      <div className="text-sm text-gray-500">{new Date(project.createdAt).toLocaleString()}</div>
+                    </div>
+                    <button
+                      className="ml-4 p-1 hover:bg-red-700 transition duration-300"
+                      onClick={(e) => {
+                        e.stopPropagation(); // Prevent the click event from triggering the onClick of the project name
+                        handleDeleteProject(project._id);
+                      }}
+                    >
+                      <MdDelete />
+                    </button>
+                  </div>
+                  {project._id === selectedProjectId && (
+                    <ul className="ml-4 mt-2">
+                      {project.scans.map(scan => (
+                        <li
+                          key={scan._id}
+                          className={`cursor-pointer hover:text-white p-1 rounded flex justify-between items-center ${scan._id === selectedScanId ? 'bg-[#121212] text-white' : 'text-gray-500'}`}
+                          onClick={() => setSelectedScanId(scan._id)}
+                        > 
+                          Scan: {new Date(scan.timestamp).toLocaleString()} | Run by: {scan.username}
+                          {scan._id === selectedScanId && (
+                            <button
+                              className="ml-4 p-1 hover:bg-red-700 transition duration-300"
+                              onClick={(e) => {
+                                e.stopPropagation(); // Prevent the click event from triggering the onClick of the scan item
+                                handleDeleteScan(scan._id);
+                              }}
+                            >
+                              <MdDelete />
+                            </button>
+                          )}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </section>
 
-        <div className="bg-[#121212] w-[20px]"></div>
+          <div className="bg-[#121212] w-[20px]"></div>
 
         <section className="flex-1 bg-[#2C2D2F] text-white p-6 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-gray-800 rounded-lg mb-4" style={{ maxHeight: '100vh', minHeight: 0 }}>
           <h2 className="text-xl mb-4 text-grey-300">Scan Details</h2>
