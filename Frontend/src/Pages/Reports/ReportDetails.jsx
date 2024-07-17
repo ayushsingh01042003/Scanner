@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import jsPDF from 'jspdf';
+import EmailModal from '../../components/EmailModal';
 
 const ReportDetails = () => {
   const [projects, setProjects] = useState([]);
@@ -9,6 +10,8 @@ const ReportDetails = () => {
   const [scanDetails, setScanDetails] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
+  const [email, setEmail] = useState('');
 
   useEffect(() => {
     fetchAllProjects();
@@ -99,6 +102,28 @@ const ReportDetails = () => {
     doc.save(`report-${scanDetails._id}.pdf`);
   };
 
+  const handleSendEmail = async () => {
+    try {
+      const formattedDetails = 
+      `Username: ${scanDetails.username}
+      Project: ${scanDetails.project.projectName}
+      Timestamp: ${scanDetails.timestamp}
+      
+      ${formatScanDetails()}`;
+  
+      await axios.post('http://localhost:3000/email', {
+        jsonData: formattedDetails,
+        receiverEmail: email
+      });
+      alert('Email sent successfully!');
+      setIsEmailModalOpen(false);
+      setEmail('');
+    } catch (error) {
+      console.error('Error sending email:', error);
+      alert('Failed to send email. Please try again.');
+    }
+  };
+
   if (loading) return <div>Loading...</div>;
   if (error) return <div>{error}</div>;
 
@@ -160,12 +185,29 @@ const ReportDetails = () => {
             )}
           </div>
           {scanDetails && (
+            <>
             <button
-              className="mt-4 p-2 bg-[#a4ff9e] hover:bg-black hover:text-[#a4ff9e] text-black py-3 px-6 rounded-lg w-64 transition duration-300 font-bold"
+              className="mt-4 p-2 bg-[#a4ff9e] hover:bg-black hover:text-[#a4ff9e] text-black py-3 px-6 rounded-lg w-54 transition duration-300 font-bold"
               onClick={handleDownloadReport}
             >
               Download Report
             </button>
+
+            <button className="mt-4 p-2 bg-[#a4ff9e] hover:bg-black hover:text-[#aeff9e] text-black py-3 px-7 rounded-lg w-54 transition duriation-300 font-bold "
+            style={{ margin: "10px" }} onClick={() => setIsEmailModalOpen(true)}
+            >
+              Email Report
+            </button>
+
+            <EmailModal 
+            isOpen={isEmailModalOpen}
+            onClose={() => setIsEmailModalOpen(false)}
+            email={email}
+            setEmail={setEmail}
+            onSend={handleSendEmail}
+            />
+
+          </>
           )}
         </section>
       </div>
