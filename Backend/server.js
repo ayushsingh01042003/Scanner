@@ -13,6 +13,9 @@ import ScanReport from './models/scanReport.model.js';
 import connectToMongoDB from './db.js';
 import autoPopulate from './utils/autoPopulate.js';
 import mongoose from 'mongoose';
+import User from './models/user.model.js';
+import bcrypt from 'bcryptjs'
+import generateTokenAndSetCookie from './utils/generateToken.js';
 dotenv.config();
 const app = express();
 const port = 3000;
@@ -21,6 +24,84 @@ app.use(express.json());
 app.use(cors());
 
 const octokit = new Octokit({ auth: process.env.GITHUB_TOKEN });
+
+app.post('/signup', async (req, res) => {
+  const { username, password, confirmPassword } = req.body;
+
+  if(password !== confirmPassword) {
+    return res.status(400).send({
+      msg: "The passwords do not match"
+    })
+  }
+
+  const userExists = await User.findOne({ username })
+  if(userExists) {
+    return res.status(400).send({
+      msg: "User already exists"
+    })
+  }
+
+  try {
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
+
+    const newUser = new User({
+      username,
+      password: hashedPassword
+    })
+
+    if(newUser) {
+      generateTokenAndSetCookie(username, res);
+
+      await newUser.save();
+      return res.status(200).send({
+        msg: `User ${newUser.username} has been created`
+      })
+    } else {
+      return res.status(400).send({
+        msg: "Invalid user data"
+      })
+    }
+
+  } catch(err) {
+    res.status(500).send({
+      msg: "An error occured",
+      error: err.message
+    })
+  }
+})
+
+app.post('/login', async (req, res) => {
+  const { username, password } = req.body
+
+  try {
+    const user = await User.findOne({ username })
+
+    if(!user) {
+      return res.status(400).send({
+        msg: "User Does not exists"
+      })
+    }
+
+    const isMatch = await bcrypt.compare(password, user.password)
+
+    if(!isMatch) {
+      return res.status(400).send({
+        msg: "Invalid Credentials"
+      })
+    }
+
+    generateTokenAndSetCookie(username, res);
+    return res.status(200).send({
+      msg: `User ${username} logged in`
+    })
+  } catch(err) {
+    return res.status(500).send({
+      msg: "Internal Server Error",
+      error: err.message
+    })
+  }
+})
 
 app.post('/scan-github', async (req, res) => {
   const { owner, repo, regexPairs } = req.body;

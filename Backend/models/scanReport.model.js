@@ -1,11 +1,15 @@
 import mongoose from "mongoose";
 
 const ScanReportSchema = new mongoose.Schema({
-  username: { type: String, required: true },
+  username: {
+    type: mongoose.Schema.Types.ObjectId,
+    required: true,
+    ref: "User",
+  },
   project: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "Project",
     required: true,
+    ref: "Project",
   },
   timestamp: { type: Date, default: Date.now },
   reportData: {
@@ -16,4 +20,4 @@ const ScanReportSchema = new mongoose.Schema({
 
 const ScanReport = mongoose.model("ScanReport", ScanReportSchema);
 
-export default ScanReport ;
+export default ScanReport;
