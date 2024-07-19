@@ -13,7 +13,7 @@ const Auth = () => {
   };
 
   if (isAuthenticated) {
-    return <Navigate to="/" />; 
+    return <Navigate to="/home" />; 
   }
 
   return (

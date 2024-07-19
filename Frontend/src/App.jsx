@@ -12,10 +12,10 @@ const App = () => {
     <AuthProvider>
       <Router>
         <Routes>
-          <Route path='/Auth' element={<Auth />} />
-          <Route path="/" element={<Layout />}>
-            <Route path="overview" element={<ProtectedRoute element={<Overview />} />} />
-            <Route path="reports" element={<ProtectedRoute element={<ReportsPage />} />} />
+          <Route path='/' element={<Auth />} /> {/* Authentication page */}
+          <Route path='/home' element={<Layout />}>
+            <Route path='overview' element={<ProtectedRoute element={<Overview />} />} />
+            <Route path='reports' element={<ProtectedRoute element={<ReportsPage />} />} />
           </Route>
         </Routes>
       </Router>

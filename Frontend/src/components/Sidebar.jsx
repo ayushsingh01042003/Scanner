@@ -2,7 +2,7 @@ import React, { useContext } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { RiBookMarkedLine } from 'react-icons/ri';
 import { FaChartPie } from 'react-icons/fa6';
-import { AuthContext } from '../Pages/Auth/AuthContext'
+import { AuthContext } from '../Pages/Auth/AuthContext';
 
 const SideBar = () => {
   const { logout, username } = useContext(AuthContext);
@@ -10,7 +10,7 @@ const SideBar = () => {
 
   const handleLogout = async () => {
     await logout();
-    navigate('/Auth'); // Redirect to the login page or any other page after logout
+    navigate('/'); // Redirect to the login page or any other page after logout
   };
 
   return (
@@ -29,13 +29,13 @@ const SideBar = () => {
             <summary className="cursor-pointer text-[#CCCCCC] hover:text-[#A8C5DA]" style={{ fontSize: '1.04rem' }}>User profile</summary>
             <ul className="ml-2 mt-2">
               <li>
-                <Link to="/overview" className="text-[#CCCCCC] hover:text-[#A8C5DA]" style={{ fontSize: '1.0rem' }}>
-                  <FaChartPie size={21} />Overview
+                <Link to="/home/overview" className="text-[#CCCCCC] hover:text-[#A8C5DA]" style={{ fontSize: '1.0rem' }}>
+                  <FaChartPie size={21} /> Overview
                 </Link>
               </li>
               <li>
-                <Link to="/reports" className="text-[#CCCCCC] hover:text-[#A8C5DA]" style={{ fontSize: '1.0rem' }}>
-                  <RiBookMarkedLine size={21} />Reports
+                <Link to="/home/reports" className="text-[#CCCCCC] hover:text-[#A8C5DA]" style={{ fontSize: '1.0rem' }}>
+                  <RiBookMarkedLine size={21} /> Reports
                 </Link>
               </li>
             </ul>
