@@ -1,7 +1,8 @@
-import React, { useState, useEffect, useRef , Suspense } from 'react';
+import React, { useState, useEffect, useRef , Suspense, useContext } from 'react';
 import { Pie } from 'react-chartjs-2';
 import { Chart as ChartJS, ArcElement, Tooltip, Legend } from 'chart.js';
 import { infinity } from 'ldrs'
+import { AuthContext } from '../Auth/AuthContext';
 
 infinity.register()
 
@@ -43,6 +44,7 @@ const Overview = () => {
   const [localDirectoryPath, setLocalDirectoryPath] = useState('');
   const [statsData, setStatsData] = useState(null);
   const [scanData, setScanData] = useState(null);
+  const { username } = useContext(AuthContext);
 
   const generateColors = (count) => {
     const hueStep = 360 / count;
@@ -285,7 +287,7 @@ const Overview = () => {
         },
         body: JSON.stringify({
           projectName,
-          username: 'hardcodeduser', // Hardcoded username as requested
+          username: username, // Hardcoded username as requested
           reportData,
         }),
       });

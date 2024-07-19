@@ -2,9 +2,8 @@ import mongoose from "mongoose";
 
 const ScanReportSchema = new mongoose.Schema({
   username: {
-    type: mongoose.Schema.Types.ObjectId,
+    type: String,
     required: true,
-    ref: "User",
   },
   project: {
     type: mongoose.Schema.Types.ObjectId,
