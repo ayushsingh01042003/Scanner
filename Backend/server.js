@@ -15,110 +15,90 @@ import autoPopulate from './utils/autoPopulate.js';
 import mongoose from 'mongoose';
 import User from './models/user.model.js';
 import bcrypt from 'bcryptjs'
+import cookieParser from 'cookie-parser';
 import generateTokenAndSetCookie from './utils/generateToken.js';
 dotenv.config();
 const app = express();
 const port = 3000;
 
 app.use(express.json());
-app.use(cors());
+app.use(cookieParser())
+app.use(cors({
+  origin: 'http://localhost:5173',
+  credentials: true,
+}));
 
 const octokit = new Octokit({ auth: process.env.GITHUB_TOKEN });
 
 app.post('/signup', async (req, res) => {
   const { username, password, confirmPassword } = req.body;
 
-  if(password !== confirmPassword) {
-    return res.status(400).send({
-      msg: "The passwords do not match"
-    })
+  if (password !== confirmPassword) {
+    return res.status(400).send({ msg: "The passwords do not match" });
   }
 
-  const userExists = await User.findOne({ username })
-  if(userExists) {
-    return res.status(400).send({
-      msg: "User already exists"
-    })
+  const userExists = await User.findOne({ username });
+  if (userExists) {
+    return res.status(400).send({ msg: "User already exists" });
   }
 
   try {
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
-    const newUser = new User({
-      username,
-      password: hashedPassword
-    })
+    const newUser = new User({ username, password: hashedPassword });
 
-    if(newUser) {
-      generateTokenAndSetCookie(username, res);
-
+    if (newUser) {
       await newUser.save();
-      return res.status(200).send({
-        msg: `User ${newUser.username} has been created`
-      })
+      return res.status(200).send({ msg: `User ${newUser.username} has been created` });
     } else {
-      return res.status(400).send({
-        msg: "Invalid user data"
-      })
+      return res.status(400).send({ msg: "Invalid user data" });
     }
-
-  } catch(err) {
-    res.status(500).send({
-      msg: "An error occured",
-      error: err.message
-    })
+  } catch (err) {
+    res.status(500).send({ msg: "An error occurred", error: err.message });
   }
-})
+});
 
 app.post('/login', async (req, res) => {
-  const { username, password } = req.body
+  const { username, password } = req.body;
 
   try {
-    const user = await User.findOne({ username })
+    const user = await User.findOne({ username });
 
-    if(!user) {
-      return res.status(400).send({
-        msg: "User Does not exists"
-      })
+    if (!user) {
+      return res.status(400).send({ msg: "User does not exist" });
     }
 
-    const isMatch = await bcrypt.compare(password, user.password)
+    const isMatch = await bcrypt.compare(password, user.password);
 
-    if(!isMatch) {
-      return res.status(400).send({
-        msg: "Invalid Credentials"
-      })
+    if (!isMatch) {
+      return res.status(400).send({ msg: "Invalid Credentials" });
     }
 
     generateTokenAndSetCookie(username, res);
-    return res.status(200).send({
-      msg: `User ${username} logged in`
-    })
-  } catch(err) {
-    return res.status(500).send({
-      msg: "Internal Server Error",
-      error: err.message
-    })
+    return res.status(200).send({ msg: `User ${username} logged in` });
+  } catch (err) {
+    return res.status(500).send({ msg: "Internal Server Error", error: err.message });
   }
-})
+});
 
 app.get('/user', (req, res) => {
-  const token = req.cookies.token;
+  const token = req.cookies.jwt; // Use the correct cookie name
   if (!token) {
-      return res.status(401).send({ msg: 'Unauthorized' });
+    return res.status(401).send({ msg: 'Unauthorized' });
   }
 
   try {
-      const decoded = jwt.verify(token, 'your_jwt_secret');
-      res.status(200).send({ username: decoded.username });
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    res.status(200).send({ username: decoded.username });
   } catch (err) {
-      res.status(401).send({ msg: 'Unauthorized' });
+    console.error("JWT verification failed:", err.message); // Log the error
+    res.status(401).send({ msg: 'Unauthorized' });
   }
 });
 
 app.post('/logout', (req, res) => {
-  res.clearCookie('token');
+  res.clearCookie('jwt'); // Use the correct cookie name
   res.status(200).send({ msg: 'Logged out' });
 });
 
