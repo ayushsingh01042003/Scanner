@@ -103,6 +103,25 @@ app.post('/login', async (req, res) => {
   }
 })
 
+app.get('/user', (req, res) => {
+  const token = req.cookies.token;
+  if (!token) {
+      return res.status(401).send({ msg: 'Unauthorized' });
+  }
+
+  try {
+      const decoded = jwt.verify(token, 'your_jwt_secret');
+      res.status(200).send({ username: decoded.username });
+  } catch (err) {
+      res.status(401).send({ msg: 'Unauthorized' });
+  }
+});
+
+app.post('/logout', (req, res) => {
+  res.clearCookie('token');
+  res.status(200).send({ msg: 'Logged out' });
+});
+
 app.post('/scan-github', async (req, res) => {
   const { owner, repo, regexPairs } = req.body;
   
