@@ -1,50 +1,68 @@
-// src/Pages/Login/Login.jsx
 import React, { useState } from 'react';
+import styled from 'styled-components';
+import myImage from './loginpanel1.png';
+import bg from './background.png';
+import { SlLogin } from "react-icons/sl";
+import {
+    Container,
+    Panel,
+    LeftSection,
+    RightSection,
+    Input,
+    Button,
+    AppPreview
+  } from './loginpage.styles';
 
-const Login = ({ onLogin }) => {
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const [message, setMessage] = useState('');
+  const Login = ({ setActiveComponent, onLogin }) => {
+    const [username, setUsername] = useState('');
+    const [password, setPassword] = useState('');
+    const [error, setError] = useState('');
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async(e) => {
     e.preventDefault();
+    setError('');
     try {
       await onLogin(username, password);
     } catch (error) {
-      setMessage('Login failed');
+      setError(error.message);
     }
   };
 
   return (
-    <div className="p-5 border rounded-lg shadow-lg w-80">
-      <h2 className="text-2xl mb-4">Login</h2>
-      <form onSubmit={handleSubmit} className="flex flex-col">
-        <label className="mb-2">
-          Username:
-          <input
-            type="text"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            className="border p-2 mt-1 rounded"
-            required
-          />
-        </label>
-        <label className="mb-2">
-          Password:
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="border p-2 mt-1 rounded"
-            required
-          />
-        </label>
-        <button type="submit" className="bg-green-500 text-white px-4 py-2 mt-4 rounded">
-          Login
-        </button>
-      </form>
-      {message && <p className="mt-4">{message}</p>}
-    </div>
+    <Container  backgroundImage={bg} >
+      <Panel>
+        <LeftSection>
+        <div className='p-16'>
+            <center><SlLogin size={35}/>
+            <h2 style={{ fontSize: '40px' }}> &zwj; Login</h2></center>
+        </div>
+          <form onSubmit={handleSubmit}>
+            <center>
+              <Input
+                type="text"
+                placeholder="username"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                required
+              />
+              <Input
+                type="password"
+                placeholder="Password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+              />
+              <Button type="submit">Login</Button>
+            </center>
+          </form>
+          <center>{error && <p className="mt-4" style={{color:'red'}}>{error}</p>}
+          <p className='p-8'>Don't have an account?<a href="#" style={{color: '#3498db'}} onClick={() => setActiveComponent('signup')}> Sign up</a></p></center>
+        </LeftSection>
+        <RightSection>
+          <AppPreview src={myImage} alt="App Preview" />
+        </RightSection>
+      </Panel>
+    </Container>
   );
 };
 
