@@ -318,42 +318,89 @@ const Overview = () => {
   const [aiMessage, setAiMessage] = useState('');
   const [aiResponse, setAiResponse] = useState('');
 
-  const handleAiChat = async () => {
-    setIsLoading(true);
-    try {
-        const response = await fetch('http://localhost:3000/gemini-chat', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ message: aiMessage }),
-        });
+//   const handleAiChat = async () => {
+//     setIsLoading(true);
+//     try {
+//         const response = await fetch('http://localhost:3000/gemini-chat', {
+//             method: 'POST',
+//             headers: {
+//                 'Content-Type': 'application/json',
+//             },
+//             body: JSON.stringify({ message: aiMessage }),
+//         });
 
-        if (!response.ok) {
-            throw new Error('Failed to get response from Gemini');
-        }
+//         if (!response.ok) {
+//             throw new Error('Failed to get response from Gemini');
+//         }
 
-        const data = await response.json();
-        setAiResponse(data.response);
+//         const data = await response.json();
+//         setAiResponse(data.response);
 
-        const piiData = JSON.parse(data.pii.replace(/```json\n|\n```/g, ''));
-        const updatedKeyValuePairs = Object.entries(piiData).map(([key, value]) => ({ key, value }));
+//         const piiData = JSON.parse(data.pii.replace(/```json\n|\n```/g, ''));
+//         const updatedKeyValuePairs = Object.entries(piiData).map(([key, value]) => ({ key, value }));
         
-        for (let i = 0; i < updatedKeyValuePairs.length; i++) {
-          updatedKeyValuePairs[i].value = "\\b" + updatedKeyValuePairs[i].value
-              .replace(/^\^|\$$/g, '')
-              .replace(/`/g, '')        
-              + "\\b";
-      }
+//         for (let i = 0; i < updatedKeyValuePairs.length; i++) {
+//           updatedKeyValuePairs[i].value = "\\b" + updatedKeyValuePairs[i].value
+//               .replace(/^\^|\$$/g, '')
+//               .replace(/`/g, '')        
+//               + "\\b";
+//       }
       
-        setKeyValuePairs(updatedKeyValuePairs);
+//         setKeyValuePairs(updatedKeyValuePairs);
 
-    } catch (error) {
-        console.error('Error in AI chat:', error);
-        setAiResponse('Failed to get response from Gemini');
-    } finally {
-        setIsLoading(false);
+//     } catch (error) {
+//         console.error('Error in AI chat:', error);
+//         setAiResponse('Failed to get response from Gemini');
+//     } finally {
+//         setIsLoading(false);
+//     }
+// };
+
+const handleAiChat = async () => {
+  setIsLoading(true);
+  try {
+    const response = await fetch('http://localhost:3000/gemini-chat', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ message: aiMessage }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.details || 'Failed to get response from Gemini');
     }
+
+    const data = await response.json();
+    setAiResponse(data.pii);
+
+    try {
+      const cleanedPiiData = data.pii.replace(/```json\n|\n```/g, '');
+      const piiData = JSON.parse(cleanedPiiData);
+      const updatedKeyValuePairs = Object.entries(piiData).map(([key, value]) => ({ 
+        key, 
+        value
+      }));
+      for (let i = 0; i < updatedKeyValuePairs.length; i++) {
+        updatedKeyValuePairs[i].value = "\\b" + updatedKeyValuePairs[i].value
+            .replace(/^\^|\$$/g, '')
+            .replace(/`/g, '')        
+            + "\\b";
+    }
+      setKeyValuePairs(updatedKeyValuePairs);
+    } catch (parseError) {
+      console.error('Error parsing PII data:', parseError);
+      console.error('Raw PII data:', data.pii);  // Log the raw data for debugging
+      setAiResponse('Received response, but it was not in the expected format. Please try again or modify your input.');
+    }
+
+  } catch (error) {
+    console.error('Error in AI chat:', error);
+    setAiResponse(`Error: ${error.message}`);
+  } finally {
+    setIsLoading(false);
+  }
 };
 
    

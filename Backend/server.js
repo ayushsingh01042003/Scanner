@@ -337,25 +337,51 @@ app.post("/regexValue", async (req, res) => {
   return res.json(response)
 })
 
+const MAX_RETRIES = 8;
+
 app.post('/gemini-chat', async (req, res) => {
   const { message } = req.body;
-  const prompt = `Provide the object structure for PII data for ${message}. The output should be in the form of a JSON object where each key represents a type of PII and its value is a regex pattern that matches that PII.`
   const client = new TextServiceClient({
     authClient: new GoogleAuth().fromAPIKey(process.env.GEMINI_API_KEY),
   });
 
-  try {
-    const result = await client.generateText({
-      model: 'models/text-bison-001',
-      prompt: { text: prompt },
-    });
+  const generatePrompt = (msg, attempt) => {
+    if (attempt === 0) {
+      return `Provide the object structure for PII data for ${msg}. The output should be in the form of a JSON object where each key represents a type of PII and its value is a regex pattern that matches that PII.`;
+    } else {
+      return `Provide the object structure for PII data for ${msg}. The output should be in the form of a JSON object where each key represents a type of PII and its value is a regex pattern that matches that PII.`;
+    }
+  };
 
-    const response = result[0].candidates[0].output || {}
+  for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+    try {
+      console.log(`Sending request to Gemini API (Attempt ${attempt + 1})`);
+      const prompt = generatePrompt(message, attempt);
+      const result = await client.generateText({
+        model: 'models/text-bison-001',
+        prompt: { text: prompt },
+      });
+      console.log('Received response from Gemini API:', JSON.stringify(result));
 
-    return res.json({ pii: response });
-  } catch (error) {
-    console.error('Error calling Gemini API:', error);
-    res.status(500).json({ error: 'Failed to get response from Gemini' });
+      if (!result || !result[0] || !result[0].candidates || result[0].candidates.length === 0) {
+        if (result[0].filters && result[0].filters.length > 0) {
+          console.log(`Content filtered. Reason: ${result[0].filters[0].reason}. Retrying with modified prompt.`);
+          continue;
+        }
+        throw new Error('Unexpected response structure from Gemini API');
+      }
+
+      const response = result[0].candidates[0].output || {};
+      return res.json({ pii: response });
+    } catch (error) {
+      console.error(`Error in attempt ${attempt + 1}:`, error);
+      if (attempt === MAX_RETRIES - 1) {
+        return res.status(500).json({ 
+          error: 'Failed to get response from Gemini after multiple attempts', 
+          details: error.message 
+        });
+      }
+    }
   }
 });
 
