@@ -13,7 +13,6 @@ ChartJS.register(ArcElement, Tooltip, Legend);
 
 const Loading = () => (
   <div className="flex justify-center items-center h-full w-full">
-    {/* <h2 className="text-xl text-[#a4ff9e] animate-pulse">Loading<span className="dots">...</span></h2> */}
     <l-infinity
       size="120"
       stroke="6"
@@ -318,43 +317,6 @@ const Overview = () => {
   const [aiMessage, setAiMessage] = useState('');
   const [aiResponse, setAiResponse] = useState('');
 
-//   const handleAiChat = async () => {
-//     setIsLoading(true);
-//     try {
-//         const response = await fetch('http://localhost:3000/gemini-chat', {
-//             method: 'POST',
-//             headers: {
-//                 'Content-Type': 'application/json',
-//             },
-//             body: JSON.stringify({ message: aiMessage }),
-//         });
-
-//         if (!response.ok) {
-//             throw new Error('Failed to get response from Gemini');
-//         }
-
-//         const data = await response.json();
-//         setAiResponse(data.response);
-
-//         const piiData = JSON.parse(data.pii.replace(/```json\n|\n```/g, ''));
-//         const updatedKeyValuePairs = Object.entries(piiData).map(([key, value]) => ({ key, value }));
-        
-//         for (let i = 0; i < updatedKeyValuePairs.length; i++) {
-//           updatedKeyValuePairs[i].value = "\\b" + updatedKeyValuePairs[i].value
-//               .replace(/^\^|\$$/g, '')
-//               .replace(/`/g, '')        
-//               + "\\b";
-//       }
-      
-//         setKeyValuePairs(updatedKeyValuePairs);
-
-//     } catch (error) {
-//         console.error('Error in AI chat:', error);
-//         setAiResponse('Failed to get response from Gemini');
-//     } finally {
-//         setIsLoading(false);
-//     }
-// };
 
 const handleAiChat = async () => {
   setIsLoading(true);

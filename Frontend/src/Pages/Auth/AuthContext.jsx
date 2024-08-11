@@ -31,16 +31,6 @@ export const AuthProvider = ({ children }) => {
     checkAuth();
   }, []);
 
-  // const login = async (username, password) => {
-  //   try {
-  //     await axios.post('http://localhost:3000/login', { username, password }, { withCredentials: true });
-  //     setIsAuthenticated(true);
-  //     setUsername(username);
-  //   } catch (error) {
-  //     console.error(error.response.data.msg);
-  //   }
-  // };
-
   const login = async (username, password) => {
     try{
       const response = await fetch('http://localhost:3000/login', {
@@ -55,10 +45,6 @@ export const AuthProvider = ({ children }) => {
       if (!response.ok) {
         throw new Error(data.msg );
       }
-  
-      // await axios.post('http://localhost:3000/login', { username, password }, { withCredentials: true });
-      // setIsAuthenticated(true);
-      // setUsername(username);
   
     setIsAuthenticated(true);
     setUsername(username);
