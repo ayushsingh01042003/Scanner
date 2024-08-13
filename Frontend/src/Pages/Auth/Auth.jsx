@@ -5,6 +5,7 @@ import Login from './Login';
 import Signup from './Signup';
 
 
+
 const Auth = () => {
   const [activeComponent, setActiveComponent] = useState('login');
   const { isAuthenticated, login } = useContext(AuthContext);
@@ -16,6 +17,7 @@ const Auth = () => {
   if (isAuthenticated) {
     return <Navigate to="/home" />; 
   }
+
 
   return (
     <>

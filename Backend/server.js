@@ -20,6 +20,7 @@ import bcrypt from 'bcryptjs'
 import cookieParser from 'cookie-parser';
 import generateTokenAndSetCookie from './utils/generateToken.js';
 import logger from './utils/logger.js';
+import authRoutes from './routes/auth.js';
 dotenv.config();
 const app = express();
 const port = 3000;
@@ -32,7 +33,9 @@ app.use(cors({
   },
   credentials: true
 }));
+
 const octokit = new Octokit({ auth: process.env.GITHUB_TOKEN });
+
 
 app.post('/signup', async (req, res) => {
   const { username, password, confirmPassword } = req.body;
@@ -393,6 +396,11 @@ app.post('/gemini-chat', async (req, res) => {
   }
 });
 
+app.use('/api/auth', authRoutes);
+
+app.get('/google-client-id',(req,res)=>{
+  res.json({ clientId: process.env.GOOGLE_CLIENT_ID });
+});
 
 app.listen(port, () => {
   connectToMongoDB();

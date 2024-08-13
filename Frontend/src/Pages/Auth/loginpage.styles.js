@@ -1,14 +1,14 @@
 import styled from 'styled-components';
 
 export const Container = styled.div`
-  background-image: ${props => `url(${props.backgroundImage})`};
+  background-image: ${props => `url(${props.backgroundimage})`};
   height: 100vh;
   display: flex;
   width: 100%;
   justify-content: center;
   align-items: center;
   font-family: Arial, sans-serif;
-  background-image: url(${props => props.backgroundImage});
+  background-image: url(${props => props.backgroundimage});
   background-size: cover;
   background-position: center;
 `;
