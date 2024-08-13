@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
+import { AuthContext } from './AuthContext';
 import styled from 'styled-components';
 import axios from 'axios';
 import myImage from './loginpanel1.png';
@@ -13,14 +14,18 @@ import {
   Button,
   AppPreview
 } from './loginpage.styles';
+import { GoogleLogin } from '@react-oauth/google';
+import { useNavigate } from 'react-router-dom';
 
 const SignupPage = ({ setActiveComponent }) => {
+  const { setIsAuthenticated , setUsername: Setgoogleusername } = useContext(AuthContext);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [message, setMessage] = useState('');
   const [errormessage, setErrorMessage] = useState('');
   const [passwordErrors, setPasswordErrors] = useState([]);
+  const navigate = useNavigate();
 
   const validatePassword=(password) => {
     let errors=[];
@@ -56,8 +61,43 @@ const SignupPage = ({ setActiveComponent }) => {
     }
   };
 
+  const handleSuccess = async (credentialResponse) => {
+    try {
+      const response = await fetch('http://localhost:3000/api/auth/google-login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ token: credentialResponse.credential }),
+        credentials: 'include',
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        // console.log('Google login response:', data);
+        document.cookie = `jwt=${data.token}; path=/; max-age=3600; SameSite=Strict; Secure`;
+        if (setIsAuthenticated && typeof setIsAuthenticated === 'function') {
+          setIsAuthenticated(true);
+        } else {
+          console.error('setIsAuthenticated is not a function');
+        }
+        Setgoogleusername(data.username);
+        navigate('/home');
+      } else {
+        console.error('Login failed');
+      }
+    } catch (error) {
+      console.error('Error during login:', error);
+    }
+  };
+
+  const handleError = () => {
+    console.log('Login Failed');
+  };
+
+
   return (
-    <Container  backgroundImage={bg} >
+    <Container  backgroundimage={bg} >
       <Panel>
         <LeftSection>
         <div className='p-14'>
@@ -97,6 +137,10 @@ const SignupPage = ({ setActiveComponent }) => {
             {message && <p className="mt-4">{message}</p>}
             {errormessage && <p className="mt-4" style={{ color: 'red' }} >{errormessage}</p>}
           <p className='p-8'>Already have an account? <a href="#" style={{color: '#3498db'}} onClick={() => setActiveComponent('login')}>Login</a></p></center>
+          <center><GoogleLogin
+              onSuccess={handleSuccess}
+              onError={handleError}
+            /></center>        
         </LeftSection>
         <RightSection>
           <AppPreview src={myImage} alt="App Preview" />

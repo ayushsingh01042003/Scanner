@@ -55,6 +55,30 @@ export const AuthProvider = ({ children }) => {
   }
   };
 
+  const googleLogin = async (token) => {
+    try {
+      const response = await fetch('http://localhost:5000/api/auth/google-login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token }),
+        credentials: 'include'
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message);
+      }
+
+      setIsAuthenticated(true);
+      setUsername(data.username);
+      return data;
+    } catch (error) {
+      console.error('Google login error:', error);
+      throw error;
+    }
+  };
+
   const logout = async () => {
     await axios.post('http://localhost:3000/logout', {}, { withCredentials: true });
     setIsAuthenticated(false);
@@ -62,7 +86,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated, loading, username, login, logout }}>
+    <AuthContext.Provider value={{ isAuthenticated,setIsAuthenticated, username, setUsername, loading, login, googleLogin ,logout }}>
       {children}
     </AuthContext.Provider>
   );
