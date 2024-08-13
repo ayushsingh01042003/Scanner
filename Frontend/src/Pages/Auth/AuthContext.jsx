@@ -57,7 +57,7 @@ export const AuthProvider = ({ children }) => {
 
   const googleLogin = async (token) => {
     try {
-      const response = await fetch('http://localhost:5000/api/auth/google-login', {
+      const response = await fetch('http://localhost:3000/api/auth/google-login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ token }),
