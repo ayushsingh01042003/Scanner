@@ -36,7 +36,6 @@ app.use(cors({
 
 const octokit = new Octokit({ auth: process.env.GITHUB_TOKEN });
 
-
 app.post('/signup', async (req, res) => {
   const { username, password, confirmPassword } = req.body;
 
@@ -267,6 +266,43 @@ app.post('/createReport', async (req, res) => {
   }
 });
 
+app.get('/api/scanReports', async (req, res) => {
+  try {
+
+    let keyCounts = {};
+    let totalKeys = 0;
+
+    // Loop through all documents in the reports and count occurrences of each key in scanDetails
+    documents.forEach(doc => {
+        if (doc.reportData && doc.reportData.scanDetails) {
+            for (let key in doc.reportData.scanDetails) {
+                if (doc.reportData.scanDetails.hasOwnProperty(key)) {
+                    keyCounts[key] = (keyCounts[key] || 0) + 1;
+                    totalKeys++;
+                }
+            }
+        }
+    });
+
+    // Calculate percentages of the each pii in the scanDetals 
+    let keyPercentages = {};
+    for (let key in keyCounts) {
+        if (keyCounts.hasOwnProperty(key)) {
+            keyPercentages[key] = (keyCounts[key] / totalKeys) * 100 + "%";
+        }
+    }
+
+    // Send the result as a JSON response 
+    res.json({
+      keyCounts: keyCounts,
+      keyPercentages: keyPercentages
+  });
+  } catch (error) {
+    console.error('Error fetching data:', error.message);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
 app.delete('/deleteProject/:projectId', async (req, res) => {
   const { projectId } = req.params
 
@@ -348,60 +384,7 @@ app.post("/regexValue", async (req, res) => {
   return res.json(response)
 })
 
-// Define a schema and model for scan reports
-const scanReportSchema = new mongoose.Schema({}, { strict: false }); // Using strict: false to allow any schema
-const ScanReports = mongoose.model('ScanReports', scanReportSchema, 'scanreports'); // 'scanreports' is the collection name
-
-app.get('/api/scanReports', async (req, res) => {
-  try {
-    // Access the database and collection
-    const database = mongoose.connection.db;
-    const collection = database.collection('scanreports');
-
-
-
-    // Fetch all documents from the scanreports collection
-    const scanReports = await collection.find({}).toArray();
-
-    // Fetch all documents from the collection
-    const documents = await ScanReports.find();
-
-    // Initialize an object to store key counts and the total count
-    let keyCounts = {};
-    let totalKeys = 0;
-
-    // Loop through all documents and count occurrences of each key in scanDetails
-    documents.forEach(doc => {
-        if (doc.reportData && doc.reportData.scanDetails) {
-            for (let key in doc.reportData.scanDetails) {
-                if (doc.reportData.scanDetails.hasOwnProperty(key)) {
-                    keyCounts[key] = (keyCounts[key] || 0) + 1;
-                    totalKeys++;
-                }
-            }
-        }
-    });
-
-    // Calculate percentages
-    let keyPercentages = {};
-    for (let key in keyCounts) {
-        if (keyCounts.hasOwnProperty(key)) {
-            keyPercentages[key] = (keyCounts[key] / totalKeys) * 100 + "%";
-        }
-    }
-
-    // Send the result as a JSON response
-    res.json({
-      keyCounts: keyCounts,
-      keyPercentages: keyPercentages
-  });
-  } catch (error) {
-    console.error('Error fetching data:', error.message);
-    res.status(500).json({ error: 'Internal Server Error' });
-  }
-});
-
-const MAX_RETRIES = 8;
+const MAX_RETRIES = 10;
 
 app.post('/gemini-chat', async (req, res) => {
   const { message } = req.body;
@@ -419,13 +402,11 @@ app.post('/gemini-chat', async (req, res) => {
 
   for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
     try {
-      console.log(`Sending request to Gemini API (Attempt ${attempt + 1})`);
       const prompt = generatePrompt(message, attempt);
       const result = await client.generateText({
         model: 'models/text-bison-001',
         prompt: { text: prompt },
       });
-      console.log('Received response from Gemini API:', JSON.stringify(result));
 
       if (!result || !result[0] || !result[0].candidates || result[0].candidates.length === 0) {
         if (result[0].filters && result[0].filters.length > 0) {
