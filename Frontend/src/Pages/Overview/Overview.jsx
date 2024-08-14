@@ -29,7 +29,8 @@ const Loading = () => (
 const Overview = () => {
   const [scanOption, setScanOption] = useState('github');
   const [url, setUrl] = useState('');
-  const [keyValuePairs, setKeyValuePairs] = useState([{ key: '', value: '' }]);
+  const [keyValuePairs, setKeyValuePairs] = useState([{key: '', value: ''}]);
+  const [scanReportData, setScanReportData] = useState({ keyCounts: {}, keyPercentages: {} });
   const [numFiles, setNumFiles] = useState(0);
   const [repoInfo, setRepoInfo] = useState({
     Java: 0,
@@ -130,6 +131,23 @@ const Overview = () => {
     });
   }
   }, [repoInfo]);
+
+  useEffect(() => {
+    const fetchScanReportData = async () => {
+      try {
+        const response = await fetch('http://localhost:3000/api/scanReports');
+        if (!response.ok) {
+          throw new Error('Failed to fetch scan report data');
+        }
+        const data = await response.json();
+        setScanReportData(data);
+      } catch (error) {
+        console.error('Error fetching scan report data:', error);
+      }
+    };
+  
+    fetchScanReportData();
+  }, []);
 
   const handleScanClick = async () => {
     setIsLoading(true);
@@ -262,6 +280,24 @@ const Overview = () => {
     }
   };
 
+
+  const InfoButton = ({ pii }) => {
+    const scanCount = scanReportData.keyCounts[pii.key] || 0;
+    const usagePercentage = scanReportData.keyPercentages[pii.key] || '0%';
+  
+    return (
+      <div className="relative inline-block group">
+        <button className="bg-[#a4ff9e] text-black rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold hover:bg-black hover:text-[#a4ff9e] transition-colors duration-300">
+          i
+        </button>
+        <div className="absolute z-10 w-64 p-3 bg-[#2C2D2F] text-white text-sm rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-all duration-300 -top-2 left-8 fade-in">
+          <p className="mb-1"><span className="font-bold">Usage:</span> {usagePercentage}</p>
+          <p><span className="font-bold">Total scans:</span> {scanCount}</p>
+        </div>
+      </div>
+    );
+  };
+
   const handleGenerateReport = async () => {
     if (!projectName) {
       alert('Please enter a project name');
@@ -303,16 +339,26 @@ const Overview = () => {
   };
 
   const handleAddKeyValuePair = () => {
-    setKeyValuePairs([...keyValuePairs, { key: '', value: '' }]);
+    setKeyValuePairs([...keyValuePairs, { key: '', value: ''}]);
   };
 
   const handleRemoveKeyValuePair = (index) => {
     if (keyValuePairs.length > 1) {
-      const newKeyValuePairs = keyValuePairs.filter((_, idx) => idx !== index);
-      setKeyValuePairs(newKeyValuePairs);
+      const piiToRemove = keyValuePairs[index];
+      const scanCount = scanReportData.keyCounts[piiToRemove.key] || 0;
+      if (scanCount > 1) {
+        if (window.confirm(
+          `This PII (${piiToRemove.key}) has been used in ${scanCount} scans. Are you sure you want to remove it?`
+        )) {
+          const newKeyValuePairs = keyValuePairs.filter((_, idx) => idx !== index);
+          setKeyValuePairs(newKeyValuePairs);
+        }
+      } else {
+        const newKeyValuePairs = keyValuePairs.filter((_, idx) => idx !== index);
+        setKeyValuePairs(newKeyValuePairs);
+      }
     }
   };
-
 
   const [aiMessage, setAiMessage] = useState('');
   const [aiResponse, setAiResponse] = useState('');
@@ -428,27 +474,32 @@ const handleAiChat = async () => {
                   </button>
                 </div>
                 {keyValuePairs.map((pair, index) => (
-                  <div className="flex space-x-2 mb-2" key={index}>
-                    <input
-                      type="text"
-                      placeholder="Key"
-                      value={pair.key}
-                      onChange={(e) => handleKeyValuePairChange(index, 'key', e.target.value)}
-                      className="bg-[#282828] text-white rounded-2xl py-4 px-4 flex-1 focus:outline-none" />
-                    <input
-                      type="text"
-                      placeholder="Value"
-                      value={pair.value}
-                      onChange={(e) => handleKeyValuePairChange(index, 'value', e.target.value)}
-                      className="bg-[#282828] text-white rounded-2xl py-4 px-4 flex-1 focus:outline-none" />
-                    {keyValuePairs.length > 1 && (
-                      <button
-                        className="bg-[#282828] hover:bg-red-700 text-white py-2 px-4 rounded"
-                        onClick={() => handleRemoveKeyValuePair(index)}
-                      >
-                        Remove
-                      </button>
-                    )}
+                  <div className="flex flex-col space-y-2 mb-4" key={index}>
+                    <InfoButton pii={pair} />
+                    <div className="flex space-x-2">
+                      <input
+                        type="text"
+                        placeholder="Key"
+                        value={pair.key}
+                        onChange={(e) => handleKeyValuePairChange(index, 'key', e.target.value)}
+                        className="bg-[#282828] text-white rounded-2xl py-4 px-4 flex-1 focus:outline-none"
+                      />
+                      <input
+                        type="text"
+                        placeholder="Value"
+                        value={pair.value}
+                        onChange={(e) => handleKeyValuePairChange(index, 'value', e.target.value)}
+                        className="bg-[#282828] text-white rounded-2xl py-4 px-4 flex-1 focus:outline-none"
+                      />
+                      {keyValuePairs.length > 1 && (
+                        <button
+                          className="bg-[#282828] hover:bg-red-700 text-white py-2 px-4 rounded transition-colors duration-300"
+                          onClick={() => handleRemoveKeyValuePair(index)}
+                        >
+                          Remove
+                        </button>
+                      )}
+                    </div>
                   </div>
                 ))}
                 <button
@@ -482,28 +533,33 @@ const handleAiChat = async () => {
                   Get Suggestions
                 </button>
               </div>
-                {keyValuePairs.map((pair, index) => (
-                  <div className="flex space-x-2 mb-2 mt-4" key={index}>
-                    <input
-                      type="text"
-                      placeholder="Key"
-                      value={pair.key}
-                      onChange={(e) => handleKeyValuePairChange(index, 'key', e.target.value)}
-                      className="bg-[#282828] text-white rounded-2xl py-4 px-4 flex-1 focus:outline-none" />
-                    <input
-                      type="text"
-                      placeholder="Value"
-                      value={pair.value}
-                      onChange={(e) => handleKeyValuePairChange(index, 'value', e.target.value)}
-                      className="bg-[#282828] text-white rounded-2xl py-4 px-4 flex-1 focus:outline-none" />
-                    {keyValuePairs.length > 1 && (
-                      <button
-                        className="bg-[#282828] hover:bg-red-700 text-white py-2 px-4 rounded-2xl"
-                        onClick={() => handleRemoveKeyValuePair(index)}
-                      >
-                        Remove
-                      </button>
-                    )}
+              {keyValuePairs.map((pair, index) => (
+                  <div className="flex flex-col space-y-2 mb-4" key={index}>
+                    <InfoButton pii={pair} />
+                    <div className="flex space-x-2">
+                      <input
+                        type="text"
+                        placeholder="Key"
+                        value={pair.key}
+                        onChange={(e) => handleKeyValuePairChange(index, 'key', e.target.value)}
+                        className="bg-[#282828] text-white rounded-2xl py-4 px-4 flex-1 focus:outline-none"
+                      />
+                      <input
+                        type="text"
+                        placeholder="Value"
+                        value={pair.value}
+                        onChange={(e) => handleKeyValuePairChange(index, 'value', e.target.value)}
+                        className="bg-[#282828] text-white rounded-2xl py-4 px-4 flex-1 focus:outline-none"
+                      />
+                      {keyValuePairs.length > 1 && (
+                        <button
+                          className="bg-[#282828] hover:bg-red-700 text-white py-2 px-4 rounded transition-colors duration-300"
+                          onClick={() => handleRemoveKeyValuePair(index)}
+                        >
+                          Remove
+                        </button>
+                      )}
+                    </div>
                   </div>
                 ))}
                 <button
