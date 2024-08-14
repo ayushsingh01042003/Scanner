@@ -109,7 +109,7 @@ The application provides a user interface for scanning public GitHub repositorie
 
 ## Contributors 🧑‍💻
 
-[ayushsingh01042003](https://github.com/ayushsingh01042003/), [MckinellGreen7](https://github.com/MckinellGreen7/), [smk927](https://github.com/smk927/), [Cobalt9000](https://github.com/Cobalt9000/), [ArshGupta74](https://github.com/ArshGupta74/), [bhuvankum4r](https://github.com/bhuvankum4r/), [niharika1708](https://github.com/niharika1708/), [hitha-n](https://github.com/hitha-n/) , [Sunidhi]
+[ayushsingh01042003](https://github.com/ayushsingh01042003/), [MckinellGreen7](https://github.com/MckinellGreen7/), [smk927](https://github.com/smk927/), [Cobalt9000](https://github.com/Cobalt9000/), [ArshGupta74](https://github.com/ArshGupta74/), [bhuvankum4r](https://github.com/bhuvankum4r/), [niharika1708](https://github.com/niharika1708/), [hitha-n](https://github.com/hitha-n/) , [Sunidhi](https://github.com/Sunidhi-Suresh/)
 
 ## Backend and Frontend installation steps 🪜:
 
