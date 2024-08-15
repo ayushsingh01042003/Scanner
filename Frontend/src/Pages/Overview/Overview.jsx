@@ -443,7 +443,8 @@ const handleAiChat = async () => {
               placeholder="Project Name"
               value={projectName}
               onChange={(e) => setProjectName(e.target.value)}
-              className="bg-[#282828] text-white rounded-2xl py-4 px-4 w-full mb-4 focus:outline-none" />
+              className="bg-[#282828] text-white rounded-2xl py-3 px-4 w-full mb-4 focus:outline-none" />
+            
             {scanOption === 'github' && (
               <div className="space-y-4">
                 <input
@@ -457,39 +458,40 @@ const handleAiChat = async () => {
                       setRepoDetails({ owner: match[1], repo: match[2] });
                     }
                   } }
-                  className="bg-[#282828] text-white rounded-2xl py-4 px-4 w-full mb-2 focus:outline-none" />
-              <div className="mt-4">
+                  className="bg-[#282828] text-white rounded-2xl py-3 px-4 w-full mb-2 focus:outline-none"
+                   />
+                  <div className="flex items-stretch space-x-4">
                   <input
                     type="text"
                     placeholder="Enter the genre of your project"
                     value={aiMessage}
                     onChange={(e) => setAiMessage(e.target.value)}
-                    className="bg-[#282828] text-white rounded-2xl py-4 px-4 w-full mb-2 focus:outline-none"
+                    className="bg-[#282828] text-white rounded-2xl py-3 px-3 w-full  focus:outline-none"
                   />
                   <button
                     onClick={handleAiChat}
-                    className="bg-[#a4ff9e] hover:bg-black hover:text-[#a4ff9e] text-black py-3 px-6 rounded-lg w-64 transition duration-300 font-bold mt-2"
+                    className="bg-[#a4ff9e] hover:bg-black hover:text-[#a4ff9e] text-black py-3 px-6 rounded-lg w-64 transition duration-300 font-bold whitespace-nowrap flex justify-center items-center"
                   >
                     Get Suggestions
                   </button>
                 </div>
                 {keyValuePairs.map((pair, index) => (
                   <div className="flex flex-col space-y-2 mb-4" key={index}>
-                    <InfoButton pii={pair} />
                     <div className="flex space-x-2">
+                    <InfoButton pii={pair} />
                       <input
                         type="text"
                         placeholder="Key"
                         value={pair.key}
                         onChange={(e) => handleKeyValuePairChange(index, 'key', e.target.value)}
-                        className="bg-[#282828] text-white rounded-2xl py-4 px-4 flex-1 focus:outline-none"
+                        className="bg-[#282828] text-white rounded-2xl py-3 px-4 flex-1 focus:outline-none"
                       />
                       <input
                         type="text"
                         placeholder="Value"
                         value={pair.value}
                         onChange={(e) => handleKeyValuePairChange(index, 'value', e.target.value)}
-                        className="bg-[#282828] text-white rounded-2xl py-4 px-4 flex-1 focus:outline-none"
+                        className="bg-[#282828] text-white rounded-2xl py-3 px-4 flex-1 focus:outline-none"
                       />
                       {keyValuePairs.length > 1 && (
                         <button
@@ -502,54 +504,64 @@ const handleAiChat = async () => {
                     </div>
                   </div>
                 ))}
-                <button
-                  className="bg-[#282828] hover:bg-black text-white py-2 px-4 rounded"
-                  onClick={handleAddKeyValuePair}
-                >
-                  Add Key-Value Pair
-                </button>
+                <div className="flex justify-between items-center mt-4">
+                  <button
+                    className="bg-[#282828] hover:bg-black text-white py-2 px-4 rounded-lg transition duration-300"
+                    onClick={handleAddKeyValuePair}
+                  >
+                    Add Key-Value Pair
+                  </button>
+                  <button
+                    className="bg-[#a4ff9e] hover:bg-black hover:text-[#a4ff9e] text-black py-3 px-6 rounded-lg w-64 transition duration-300 font-bold"
+                    onClick={handleScanClick}
+                  >
+                    Scan
+                  </button>
+                </div>
               </div>
             )}
+
             {scanOption === 'local' && (
-              <div className="mb-4">
+            <div className="space-y-4">
                 <input
                   type="text"
                   placeholder="Enter local directory path"
                   value={localDirectoryPath}
                   onChange={(e) => setLocalDirectoryPath(e.target.value)}
-                  className="bg-[#282828] text-white rounded-2xl py-4 px-4 w-full mb-2 focus:outline-none" />
-                <div className="mt-4">
-                <input
-                  type="text"
-                  placeholder="Enter the genre of your project"
-                  value={aiMessage}
-                  onChange={(e) => setAiMessage(e.target.value)}
-                  className="bg-[#282828] text-white rounded-2xl py-4 px-4 w-full mb-2 focus:outline-none"
+                  className="bg-[#282828] text-white rounded-2xl py-3 px-4 w-full mb-2 focus:outline-none"
                 />
-                <button
-                  onClick={handleAiChat}
-                  className="bg-[#a4ff9e] hover:bg-black hover:text-[#a4ff9e] text-black py-3 px-6 rounded-lg w-64 transition duration-300 font-bold mt-2"
-                >
-                  Get Suggestions
-                </button>
-              </div>
+                <div className="flex items-stretch space-x-4">
+                  <input
+                    type="text"
+                    placeholder="Enter the genre of your project"
+                    value={aiMessage}
+                    onChange={(e) => setAiMessage(e.target.value)}
+                    className="bg-[#282828] text-white rounded-2xl py-3 px-3 w-full  focus:outline-none"
+                  />
+                  <button
+                    onClick={handleAiChat}
+                    className="bg-[#a4ff9e] hover:bg-black hover:text-[#a4ff9e] text-black py-3 px-6 rounded-lg w-64 transition duration-300 font-bold whitespace-nowrap flex justify-center items-center"
+                  >
+                    Get Suggestions
+                  </button>
+                </div>
               {keyValuePairs.map((pair, index) => (
                   <div className="flex flex-col space-y-2 mb-4" key={index}>
-                    <InfoButton pii={pair} />
                     <div className="flex space-x-2">
+                    <InfoButton pii={pair} />
                       <input
                         type="text"
                         placeholder="Key"
                         value={pair.key}
                         onChange={(e) => handleKeyValuePairChange(index, 'key', e.target.value)}
-                        className="bg-[#282828] text-white rounded-2xl py-4 px-4 flex-1 focus:outline-none"
+                        className="bg-[#282828] text-white rounded-2xl py-3 px-4 flex-1 focus:outline-none"
                       />
                       <input
                         type="text"
                         placeholder="Value"
                         value={pair.value}
                         onChange={(e) => handleKeyValuePairChange(index, 'value', e.target.value)}
-                        className="bg-[#282828] text-white rounded-2xl py-4 px-4 flex-1 focus:outline-none"
+                        className="bg-[#282828] text-white rounded-2xl py-3 px-4 flex-1 focus:outline-none"
                       />
                       {keyValuePairs.length > 1 && (
                         <button
@@ -562,23 +574,25 @@ const handleAiChat = async () => {
                     </div>
                   </div>
                 ))}
-                <button
-                  className="bg-[#282828] hover:bg-green-700 text-white py-2 px-4 rounded mt-2"
-                  onClick={handleAddKeyValuePair}
-                >
-                  Add Key-Value Pair
-                </button>
+
+                <div className="flex justify-between items-center mt-4">
+                  <button
+                    className="bg-[#282828] hover:bg-black text-white py-2 px-4 rounded-lg transition duration-300"
+                    onClick={handleAddKeyValuePair}
+                  >
+                    Add Key-Value Pair
+                  </button>
+                  <button
+                    className="bg-[#a4ff9e] hover:bg-black hover:text-[#a4ff9e] text-black py-3 px-6 rounded-lg w-64 transition duration-300 font-bold whitespace-nowrap"
+                    onClick={handleScanClick}
+                  >
+                    Scan
+                  </button>
+                </div>
               </div>
             )}
 
-            <div className="flex justify-end mt-4">
-              <button
-                className="bg-[#a4ff9e] hover:bg-black hover:text-[#a4ff9e] text-black py-3 px-6 rounded-lg w-64 transition duration-300 font-bold"
-                onClick={handleScanClick}
-              >
-                Scan
-              </button>
-            </div>
+            
           </div>
         </div>
 
