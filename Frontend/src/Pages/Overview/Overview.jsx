@@ -484,14 +484,14 @@ const handleAiChat = async () => {
                         placeholder="Key"
                         value={pair.key}
                         onChange={(e) => handleKeyValuePairChange(index, 'key', e.target.value)}
-                        className="bg-[#282828] text-white rounded-2xl py-3 px-4 flex-1 focus:outline-none"
+                        className="bg-[#282828] text-white rounded-2xl py-4 px-4 flex-1 focus:outline-none"
                       />
                       <input
                         type="text"
                         placeholder="Value"
                         value={pair.value}
                         onChange={(e) => handleKeyValuePairChange(index, 'value', e.target.value)}
-                        className="bg-[#282828] text-white rounded-2xl py-3 px-4 flex-1 focus:outline-none"
+                        className="bg-[#282828] text-white rounded-2xl py-4 px-4 flex-1 focus:outline-none"
                       />
                       {keyValuePairs.length > 1 && (
                         <button
@@ -546,34 +546,34 @@ const handleAiChat = async () => {
                   </button>
                 </div>
               {keyValuePairs.map((pair, index) => (
-                  <div className="flex flex-col space-y-2 mb-4" key={index}>
-                    <div className="flex space-x-2">
-                    <InfoButton pii={pair} />
-                      <input
-                        type="text"
-                        placeholder="Key"
-                        value={pair.key}
-                        onChange={(e) => handleKeyValuePairChange(index, 'key', e.target.value)}
-                        className="bg-[#282828] text-white rounded-2xl py-3 px-4 flex-1 focus:outline-none"
-                      />
-                      <input
-                        type="text"
-                        placeholder="Value"
-                        value={pair.value}
-                        onChange={(e) => handleKeyValuePairChange(index, 'value', e.target.value)}
-                        className="bg-[#282828] text-white rounded-2xl py-3 px-4 flex-1 focus:outline-none"
-                      />
-                      {keyValuePairs.length > 1 && (
-                        <button
-                          className="bg-[#282828] hover:bg-red-700 text-white py-2 px-4 rounded transition-colors duration-300"
-                          onClick={() => handleRemoveKeyValuePair(index)}
-                        >
-                          Remove
-                        </button>
-                      )}
-                    </div>
+                <div className="flex flex-col space-y-2 mb-4" key={index}>
+                  <div className="flex space-x-2">
+                  <InfoButton pii={pair} />
+                    <input
+                      type="text"
+                      placeholder="Key"
+                      value={pair.key}
+                      onChange={(e) => handleKeyValuePairChange(index, 'key', e.target.value)}
+                      className="bg-[#282828] text-white rounded-2xl py-4 px-4 flex-1 focus:outline-none"
+                    />
+                    <input
+                      type="text"
+                      placeholder="Value"
+                      value={pair.value}
+                      onChange={(e) => handleKeyValuePairChange(index, 'value', e.target.value)}
+                      className="bg-[#282828] text-white rounded-2xl py-4 px-4 flex-1 focus:outline-none"
+                    />
+                    {keyValuePairs.length > 1 && (
+                      <button
+                        className="bg-[#282828] hover:bg-red-700 text-white py-2 px-4 rounded transition-colors duration-300"
+                        onClick={() => handleRemoveKeyValuePair(index)}
+                      >
+                        Remove
+                      </button>
+                    )}
                   </div>
-                ))}
+                </div>
+              ))}
 
                 <div className="flex justify-between items-center mt-4">
                   <button
