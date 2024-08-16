@@ -269,6 +269,10 @@ app.post('/createReport', async (req, res) => {
 app.get('/api/scanReports', async (req, res) => {
   try {
 
+    const database = mongoose.connection.db;
+    const collection = database.collection('scanreports');
+    const documents = await collection.find({}).toArray();
+
     let keyCounts = {};
     let totalKeys = 0;
 
@@ -288,7 +292,7 @@ app.get('/api/scanReports', async (req, res) => {
     let keyPercentages = {};
     for (let key in keyCounts) {
         if (keyCounts.hasOwnProperty(key)) {
-            keyPercentages[key] = (keyCounts[key] / totalKeys) * 100 + "%";
+          keyPercentages[key] = Math.round((keyCounts[key] / totalKeys) * 100) + "%";
         }
     }
 
