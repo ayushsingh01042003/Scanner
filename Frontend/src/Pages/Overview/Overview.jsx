@@ -112,6 +112,51 @@ const Overview = () => {
     }
   };
 
+  const handleAiMessageChange = (e) => {
+    const newValue = e.target.value;
+    setAiMessage(newValue);
+  
+    if (debounceTimeouts.current.aiMessage) {
+      clearTimeout(debounceTimeouts.current.aiMessage);
+    }
+  
+    debounceTimeouts.current.aiMessage = setTimeout(async () => {
+      if (newValue !== '') {
+        try {
+          const response = await fetch('http://localhost:3000/gemini-chat', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ message: newValue }),
+          });
+  
+          if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.details || 'Failed to get response from Gemini');
+          }
+  
+          const data = await response.json();
+  
+          try {
+            const cleanedPiiData = data.pii.replace(/```json\n|\n```/g, '');
+            const piiData = JSON.parse(cleanedPiiData);
+            const updatedKeyValuePairs = Object.entries(piiData).map(([key, value]) => ({ 
+              key, 
+              value: "\\b" + value.replace(/^\^|\$$/g, '').replace(/`/g, '') + "\\b"
+            }));
+            setKeyValuePairs(updatedKeyValuePairs);
+          } catch (parseError) {
+            console.error('Error parsing PII data:', parseError);
+            console.error('Raw PII data:', data.pii);
+          }
+        } catch (error) {
+          console.error('Error in AI chat:', error);
+        }
+      }
+    }, 1000);
+  };
+
   useEffect(() => {
 
     if(Object.values(repoInfo).length === 0) {
@@ -461,20 +506,14 @@ const handleAiChat = async () => {
                   className="bg-[#282828] text-white rounded-2xl py-3 px-4 w-full mb-2 focus:outline-none"
                    />
                   <div className="flex items-stretch space-x-4">
-                  <input
-                    type="text"
-                    placeholder="Enter the genre of your project"
-                    value={aiMessage}
-                    onChange={(e) => setAiMessage(e.target.value)}
-                    className="bg-[#282828] text-white rounded-2xl py-3 px-3 w-full  focus:outline-none"
-                  />
-                  <button
-                    onClick={handleAiChat}
-                    className="bg-[#a4ff9e] hover:bg-black hover:text-[#a4ff9e] text-black py-3 px-6 rounded-lg w-64 transition duration-300 font-bold whitespace-nowrap flex justify-center items-center"
-                  >
-                    Get Suggestions
-                  </button>
-                </div>
+                    <input
+                      type="text"
+                      placeholder="Enter the genre of your project"
+                      value={aiMessage}
+                      onChange={handleAiMessageChange}
+                      className="bg-[#282828] text-white rounded-2xl py-3 px-3 w-full focus:outline-none"
+                    />
+                  </div>
                 {keyValuePairs.map((pair, index) => (
                   <div className="flex flex-col space-y-2 mb-4" key={index}>
                     <div className="flex space-x-2">
@@ -535,15 +574,9 @@ const handleAiChat = async () => {
                     type="text"
                     placeholder="Enter the genre of your project"
                     value={aiMessage}
-                    onChange={(e) => setAiMessage(e.target.value)}
-                    className="bg-[#282828] text-white rounded-2xl py-3 px-3 w-full  focus:outline-none"
+                    onChange={handleAiMessageChange}
+                    className="bg-[#282828] text-white rounded-2xl py-3 px-3 w-full focus:outline-none"
                   />
-                  <button
-                    onClick={handleAiChat}
-                    className="bg-[#a4ff9e] hover:bg-black hover:text-[#a4ff9e] text-black py-3 px-6 rounded-lg w-64 transition duration-300 font-bold whitespace-nowrap flex justify-center items-center"
-                  >
-                    Get Suggestions
-                  </button>
                 </div>
               {keyValuePairs.map((pair, index) => (
                 <div className="flex flex-col space-y-2 mb-4" key={index}>
