@@ -21,6 +21,10 @@ import cookieParser from 'cookie-parser';
 import generateTokenAndSetCookie from './utils/generateToken.js';
 import logger from './utils/logger.js';
 import authRoutes from './routes/auth.js';
+import { scanFileContent } from './scanners/pii-scanner.js';
+import fetchRemoteLogFile from './utils/fetchRemoteLogFile.js';
+import { Client } from 'ssh2';
+import fs from 'fs';
 dotenv.config();
 const app = express();
 const port = 3000;
@@ -145,6 +149,37 @@ app.post('/scan-directory', (req, res) => {
   } catch (error) {
     logger.error('Error scanning directory:', error);
     res.status(500).json({ error: 'Failed to scan directory', details: error.message });
+  }
+});
+
+app.post('/scan-remote-log', async (req, res) => {
+  const { 
+    host,
+    port,
+    username,
+    privateKeyPath,
+    logFilePath,
+    regexPairs
+  } = req.body;
+
+  if (!host || !username || !privateKeyPath || !logFilePath || !regexPairs) {
+    return res.status(400).json({ error: 'Missing required parameters' });
+  }
+
+  try {
+    const logContent = await fetchRemoteLogFile({
+      host,
+      port: port || 22,
+      username,
+      privateKeyPath,
+      logFilePath
+    });
+
+    const piiVulnerabilities = scanFileContent(logContent, regexPairs);
+    res.json(piiVulnerabilities);
+  } catch (error) {
+    console.error('Error scanning remote log file:', error);
+    res.status(500).json({ error: 'Failed to scan remote log file', details: error.message });
   }
 });
 
