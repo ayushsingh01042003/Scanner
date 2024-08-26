@@ -11,9 +11,18 @@ const ScanReportSchema = new mongoose.Schema({
     ref: "Project",
   },
   timestamp: { type: Date, default: Date.now },
+  scanType: {
+    type: String,
+    enum: ['github', 'local', 'dynamic'],
+    required: true
+  },
   reportData: {
     scanDetails: mongoose.Schema.Types.Mixed,
     stats: mongoose.Schema.Types.Mixed,
+    logStats: {
+      totalLines: Number,
+    },
+    vulnerabilities: mongoose.Schema.Types.Mixed,
   },
 });
 
