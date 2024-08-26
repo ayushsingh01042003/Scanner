@@ -23,8 +23,7 @@ import logger from './utils/logger.js';
 import authRoutes from './routes/auth.js';
 import { scanFileContent } from './scanners/pii-scanner.js';
 import fetchRemoteLogFile from './utils/fetchRemoteLogFile.js';
-import { Client } from 'ssh2';
-import fs from 'fs';
+
 dotenv.config();
 const app = express();
 const port = 3000;
@@ -32,7 +31,7 @@ const port = 3000;
 app.use(express.json());
 app.use(cookieParser())
 app.use(cors({
-  origin: function(origin, callback) {
+  origin: function (origin, callback) {
     callback(null, true);
   },
   credentials: true
@@ -119,7 +118,7 @@ app.post('/logout', (req, res) => {
 
 app.post('/scan-github', async (req, res) => {
   const { owner, repo, regexPairs } = req.body;
-  
+
   try {
     const piiVulnerabilities = await scanGitHubRepository(owner, repo, regexPairs);
     res.json(piiVulnerabilities);
@@ -153,33 +152,64 @@ app.post('/scan-directory', (req, res) => {
 });
 
 app.post('/scan-remote-log', async (req, res) => {
-  const { 
+  const {
     host,
     port,
-    username,
+    logusername,
     privateKeyPath,
     logFilePath,
     regexPairs
   } = req.body;
 
-  if (!host || !username || !privateKeyPath || !logFilePath || !regexPairs) {
+  if (!host || !logusername || !privateKeyPath || !logFilePath || !regexPairs) {
     return res.status(400).json({ error: 'Missing required parameters' });
   }
 
   try {
+    console.log('Fetching remote log file for scanning...');
     const logContent = await fetchRemoteLogFile({
       host,
       port: port || 22,
-      username,
+      logusername,
       privateKeyPath,
       logFilePath
     });
 
+    console.log('Scanning file content...');
     const piiVulnerabilities = scanFileContent(logContent, regexPairs);
-    res.json(piiVulnerabilities);
+
+    // Analyze log content
+    const logStats = analyzeLogContent(logContent);
+
+    // Combine vulnerabilities and log stats
+    const result = {
+      vulnerabilities: piiVulnerabilities,
+      logStats: logStats
+    };
+
+    res.json(result);
   } catch (error) {
-    console.error('Error scanning remote log file:', error);
+    console.error('Error in /scan-remote-log:', error);
     res.status(500).json({ error: 'Failed to scan remote log file', details: error.message });
+  }
+});
+
+app.post('/dynamic-log-stats', async (req, res) => {
+  const { host, port, logusername, privateKeyPath, logFilePath } = req.body;
+
+  if (!host || !port || !logusername || !privateKeyPath || !logFilePath) {
+    return res.status(400).json({ error: 'Missing required fields in request body' });
+  }
+
+  try {
+    console.log('Fetching remote log file...');
+    const logContent = await fetchRemoteLogFile({ host, port, logusername, privateKeyPath, logFilePath });
+    console.log('Analyzing log content...');
+    const logStats = analyzeLogContent(logContent);
+    res.json(logStats);
+  } catch (error) {
+    console.error('Error in /dynamic-log-stats:', error);
+    res.status(500).json({ error: 'Failed to fetch or analyze log file', details: error.message });
   }
 });
 
@@ -221,21 +251,21 @@ app.post('/local-directory-stats', async (req, res) => {
 
 app.post("/email", async (req, res) => {
   console.log("Received email request:", req.body);
-  const {jsonData, receiverEmail} = req.body
+  const { jsonData, receiverEmail } = req.body
   try {
     const result = await mailData(jsonData, receiverEmail)
     return res.status(200).json({ message: "Email sent successfully", result })
-  } catch(err) {
+  } catch (err) {
     logger.error("Error sending email:", err)
     return res.status(500).json({ error: "Unable to send email" })
   }
 })
 
 app.get('/remaining_requests', async (req, res) => {
-  try{
+  try {
     const rem = await remainingRequest()
     res.send(`Number of Remaining Request: ${rem}`)
-  } catch(err){
+  } catch (err) {
     return res.send("Unable to Fetch Remaining Request")
   }
 })
@@ -247,9 +277,9 @@ app.get('/getAllProjects', async (req, res) => {
       .limit(10)  // Limit to the 10 most recently scanned projects
       .populate({
         path: 'scans',
-        options: { sort: { timestamp: -1 }}
+        options: { sort: { timestamp: -1 } }
       });
-    
+
     res.json(projects);
   } catch (error) {
     logger.error('Error fetching projects', { error: error.message });
@@ -259,13 +289,16 @@ app.get('/getAllProjects', async (req, res) => {
 
 app.get('/getReport/:reportId', async (req, res) => {
   try {
-    const report = await ScanReport.findById(req.params.reportId)
-      .populate('project', 'projectName');
-    
+    let report = await ScanReport.findById(req.params.reportId).populate('project', 'projectName');
+
+    if (!report) {
+      report = await DynamicScanReport.findById(req.params.reportId).populate('project', 'projectName');
+    }
+
     if (!report) {
       return res.status(404).json({ message: 'Report not found' });
     }
-    
+
     res.json(report);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -273,11 +306,11 @@ app.get('/getReport/:reportId', async (req, res) => {
 });
 
 app.post('/createReport', async (req, res) => {
-  const { projectName, username, reportData } = req.body;
+  const { projectName, username, reportData, scanType } = req.body;
 
   try {
     let project = await Project.findOne({ projectName });
-    
+
     if (!project) {
       project = new Project({ projectName });
     }
@@ -285,7 +318,13 @@ app.post('/createReport', async (req, res) => {
     const scanReport = new ScanReport({
       username,
       project: project._id,
-      reportData
+      scanType,
+      reportData: {
+        scanDetails: reportData.scanDetails,
+        stats: reportData.stats,
+        logStats: reportData.logStats,
+        vulnerabilities: reportData.vulnerabilities,
+      },
     });
 
     await scanReport.save();
@@ -313,29 +352,29 @@ app.get('/api/scanReports', async (req, res) => {
 
     // Loop through all documents in the reports and count occurrences of each key in scanDetails
     documents.forEach(doc => {
-        if (doc.reportData && doc.reportData.scanDetails) {
-            for (let key in doc.reportData.scanDetails) {
-                if (doc.reportData.scanDetails.hasOwnProperty(key)) {
-                    keyCounts[key] = (keyCounts[key] || 0) + 1;
-                    totalKeys++;
-                }
-            }
+      if (doc.reportData && doc.reportData.scanDetails) {
+        for (let key in doc.reportData.scanDetails) {
+          if (doc.reportData.scanDetails.hasOwnProperty(key)) {
+            keyCounts[key] = (keyCounts[key] || 0) + 1;
+            totalKeys++;
+          }
         }
+      }
     });
 
     // Calculate percentages of the each pii in the scanDetals 
     let keyPercentages = {};
     for (let key in keyCounts) {
-        if (keyCounts.hasOwnProperty(key)) {
-          keyPercentages[key] = Math.round((keyCounts[key] / totalKeys) * 100) + "%";
-        }
+      if (keyCounts.hasOwnProperty(key)) {
+        keyPercentages[key] = Math.round((keyCounts[key] / totalKeys) * 100) + "%";
+      }
     }
 
     // Send the result as a JSON response 
     res.json({
       keyCounts: keyCounts,
       keyPercentages: keyPercentages
-  });
+    });
   } catch (error) {
     console.error('Error fetching data:', error.message);
     res.status(500).json({ error: 'Internal Server Error' });
@@ -350,7 +389,7 @@ app.delete('/deleteProject/:projectId', async (req, res) => {
 
   try {
     const project = await Project.findById(projectId).session(session)
-    if(!project) {
+    if (!project) {
       await session.abortTransaction()
       session.endSession()
       res.status(404).send({
@@ -373,10 +412,10 @@ app.delete('/deleteProject/:projectId', async (req, res) => {
     logger.error('Error deleting project', { projectId, error: err.message });
     await session.abortTransaction();
     session.endSession();
-    
+
     res.status(500).send({
       msg: "Something went wrong",
-      error : err.message
+      error: err.message
     })
   }
 })
@@ -386,7 +425,7 @@ app.delete('/deleteScan/:scanId', async (req, res) => {
 
   try {
     const scan = await ScanReport.findById(scanId);
-    if(!scan) {
+    if (!scan) {
       res.status(404).send({
         msg: "Scan does not exist"
       })
@@ -394,7 +433,7 @@ app.delete('/deleteScan/:scanId', async (req, res) => {
     }
 
     const project = await Project.findById(scan.project)
-    if(!project) {
+    if (!project) {
       res.status(404).send({
         msg: "Project Not found"
       })
@@ -409,7 +448,7 @@ app.delete('/deleteScan/:scanId', async (req, res) => {
       msg: "Scan deleted Successfully"
     })
 
-  } catch(error) {
+  } catch (error) {
     res.status(500).send({
       msg: "Error Occured",
       error: error.message
@@ -418,7 +457,7 @@ app.delete('/deleteScan/:scanId', async (req, res) => {
 })
 
 app.post("/regexValue", async (req, res) => {
-  const {data} = req.body;
+  const { data } = req.body;
   const response = await autoPopulate(data)
   return res.json(response)
 })
@@ -460,9 +499,9 @@ app.post('/gemini-chat', async (req, res) => {
     } catch (error) {
       console.error(`Error in attempt ${attempt + 1}:`, error);
       if (attempt === MAX_RETRIES - 1) {
-        return res.status(500).json({ 
-          error: 'Failed to get response from Gemini after multiple attempts', 
-          details: error.message 
+        return res.status(500).json({
+          error: 'Failed to get response from Gemini after multiple attempts',
+          details: error.message
         });
       }
     }
@@ -471,7 +510,7 @@ app.post('/gemini-chat', async (req, res) => {
 
 app.use('/api/auth', authRoutes);
 
-app.get('/google-client-id',(req,res)=>{
+app.get('/google-client-id', (req, res) => {
   res.json({ clientId: process.env.GOOGLE_CLIENT_ID });
 });
 
@@ -479,3 +518,13 @@ app.listen(port, () => {
   connectToMongoDB();
   logger.info(`Server is running on http://localhost:${port}`);
 });
+
+function analyzeLogContent(logContent) {
+  const stats = {
+    totalLines: 0,
+  };
+
+  const lines = logContent.split('\n');
+  stats.totalLines = lines.length;
+  return stats;
+}
