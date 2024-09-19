@@ -23,6 +23,9 @@ import logger from './utils/logger.js';
 import authRoutes from './routes/auth.js';
 import { scanFileContent } from './scanners/pii-scanner.js';
 import fetchRemoteLogFile from './utils/fetchRemoteLogFile.js';
+import https from 'https';
+import axios from 'axios';
+import querystring from 'querystring';
 
 dotenv.config();
 const app = express();
@@ -36,6 +39,11 @@ app.use(cors({
   },
   credentials: true
 }));
+
+const splunkHost = process.env.SPLUNK_HOST;
+const splunkPort = process.env.SPLUNK_PORT;
+const splunkUsername = process.env.SPLUNK_USERNAME;
+const splunkPassword = process.env.SPLUNK_PASSWORD;
 
 const octokit = new Octokit({ auth: process.env.GITHUB_TOKEN });
 
@@ -514,10 +522,58 @@ app.get('/google-client-id', (req, res) => {
   res.json({ clientId: process.env.GOOGLE_CLIENT_ID });
 });
 
-app.listen(port, () => {
-  connectToMongoDB();
-  logger.info(`Server is running on http://localhost:${port}`);
+const splunkSearchUrl = `https://${splunkHost}:${splunkPort}/services/search/jobs`;
+
+// Create a custom HTTPS agent that doesn't verify SSL certificates
+const agent = new https.Agent({
+  rejectUnauthorized: false
 });
+
+// Create an axios instance with the custom agent
+const axiosInstance = axios.create({
+  httpsAgent: agent,
+  auth: {
+    username: splunkUsername,
+    password: splunkPassword
+  }
+});
+
+app.post('/splunk-search', async (req, res) => {
+  const { index, fieldRegexPairs } = req.body;
+  
+  // Construct the search query
+  let searchQuery = `search index=${index || '*'}`;
+  
+  for (const [field, regex] of Object.entries(fieldRegexPairs)) {
+    // Use Splunk's search command syntax for regex extraction
+    searchQuery += ` | rex field=_raw "(?<${field}>${regex})"`;
+  }
+  
+  searchQuery += ' | table ' + Object.keys(fieldRegexPairs).join(', '); // To display the extracted fields
+  
+  try {
+    // Create a search query
+    const params = querystring.stringify({
+      search: searchQuery,
+      output_mode: 'json',
+      exec_mode: 'oneshot'  // This will make Splunk wait for the search to complete before responding
+    });
+
+    const createJobResponse = await axiosInstance.post(splunkSearchUrl, params, {
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded'
+      }
+    });
+
+    // The results are directly in the response
+    res.json(createJobResponse.data);
+
+  } catch (error) {
+    console.error('Error:', error.response ? error.response.data : error.message);
+    res.status(500).json({ error: 'An error occurred while querying Splunk', details: error.response ? error.response.data : error.message });
+  }
+});
+
 
 function analyzeLogContent(logContent) {
   const stats = {
@@ -528,3 +584,8 @@ function analyzeLogContent(logContent) {
   stats.totalLines = lines.length;
   return stats;
 }
+
+app.listen(port, () => {
+  connectToMongoDB();
+  logger.info(`Server is running on http://localhost:${port}`);
+});
