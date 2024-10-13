@@ -1,8 +1,6 @@
 import express from 'express';
 import { scanGitHubRepository } from './scanners/github-scanner.js';
-import { GoogleAuth } from 'google-auth-library';
 import scanDirectory from './scanners/file-scanner.js';
-import { TextServiceClient } from '@google-ai/generativelanguage';
 import scanFiles from './scanners/pii-localScanner.js';
 import { analyzeLocalDirectory, analyzeGitHubRepository } from './utils/language-analyzer.js';
 import { Octokit } from 'octokit';
@@ -23,6 +21,11 @@ import logger from './utils/logger.js';
 import authRoutes from './routes/auth.js';
 import { scanFileContent } from './scanners/pii-scanner.js';
 import fetchRemoteLogFile from './utils/fetchRemoteLogFile.js';
+import https from 'https';
+import axios from 'axios';
+import querystring from 'querystring';  
+import autoPopulateS from './utils/autoPopulateS.js';
+
 
 dotenv.config();
 const app = express();
@@ -36,6 +39,11 @@ app.use(cors({
   },
   credentials: true
 }));
+
+const splunkHost = process.env.SPLUNK_HOST;
+const splunkPort = process.env.SPLUNK_PORT;
+const splunkUsername = process.env.SPLUNK_USERNAME;
+const splunkPassword = process.env.SPLUNK_PASSWORD;
 
 const octokit = new Octokit({ auth: process.env.GITHUB_TOKEN });
 
@@ -458,55 +466,340 @@ app.delete('/deleteScan/:scanId', async (req, res) => {
 
 app.post("/regexValue", async (req, res) => {
   const { data } = req.body;
-  const response = await autoPopulate(data)
-  return res.json(response)
-})
-
-const MAX_RETRIES = 10;
-
-app.post('/gemini-chat', async (req, res) => {
-  const { message } = req.body;
-  const client = new TextServiceClient({
-    authClient: new GoogleAuth().fromAPIKey(process.env.GEMINI_API_KEY),
-  });
-
-  const generatePrompt = (msg, attempt) => {
-    if (attempt === 0) {
-      return `Provide the object structure for PII data for ${msg}. The output should be in the form of a JSON object where each key represents a type of PII and its value is a regex pattern that matches that PII.`;
-    } else {
-      return `Provide the object structure for PII data for ${msg}. The output should be in the form of a JSON object where each key represents a type of PII and its value is a regex pattern that matches that PII.`;
-    }
-  };
-
-  for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
-    try {
-      const prompt = generatePrompt(message, attempt);
-      const result = await client.generateText({
-        model: 'models/text-bison-001',
-        prompt: { text: prompt },
-      });
-
-      if (!result || !result[0] || !result[0].candidates || result[0].candidates.length === 0) {
-        if (result[0].filters && result[0].filters.length > 0) {
-          console.log(`Content filtered. Reason: ${result[0].filters[0].reason}. Retrying with modified prompt.`);
-          continue;
-        }
-        throw new Error('Unexpected response structure from Gemini API');
-      }
-
-      const response = result[0].candidates[0].output || {};
-      return res.json({ pii: response });
-    } catch (error) {
-      console.error(`Error in attempt ${attempt + 1}:`, error);
-      if (attempt === MAX_RETRIES - 1) {
-        return res.status(500).json({
-          error: 'Failed to get response from Gemini after multiple attempts',
-          details: error.message
-        });
-      }
-    }
+  
+  try {
+    const response = await autoPopulate(data);  
+    return res.json(response);
+  } catch (error) {
+    return res.status(500).json({ error: 'Error generating regex', details: error.message });
   }
 });
+
+app.post("/regexValue-splunk", async (req, res) => {
+  const { data } = req.body;
+  
+  try {
+    const response = await autoPopulateS(data);  
+    return res.json(response);
+  } catch (error) {
+    return res.status(500).json({ error: 'Error generating regex', details: error.message });
+  }
+});
+
+// Mistral API integration for regex generation based on project genre for normal
+app.post('/mistral-chat', async (req, res) => {
+  const { message } = req.body;
+
+  const generatePrompt = (msg) => {
+    return `Generate a set of regex patterns for identifying PII in a project related to ${msg}. The output should be a JSON object 
+    where each key represents a type of PII (e.g., 'ssn', 'email', 'phone_number') and its value is a regex pattern that matches that PII. Use the following formats:
+    - SSN: \\b(?!000|666|9\\d{2})\\d{3}-(?!00)\\d{2}-(?!0000)\\d{4}\\b
+    - Email: \\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Z|a-z]{2,}\\b
+    - Phone Number: \\b\\d{3}[-.]?\\d{3}[-.]?\\d{4}\\b
+    - credit_card: \\b\d{4}[- ]?\d{4}[- ]?\d{4}[- ]?\d{4}\\b,
+    - date_of_birth: \\b(0[1-9]|1[0-2])\/(0[1-9]|[12]\d|3[01])\/(19|20)\d{2}\\b,
+    - ip_address: \\b(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\b,
+    - mac_address: \\b(?:[0-9A-Fa-f]{2}[:-]){5}(?:[0-9A-Fa-f]{2})\\b,
+    - iban: \\b[A-Z]{2}\d{2}[A-Z0-9]{11,30}\\b,
+    - zip_code: \\b\d{5}(-\d{4})?\\b,
+    - gender: \\b(Male|Female)\\b
+
+    Provide at least 5 relevant PII types and their regex patterns. Only respond with the JSON object, no additional text. 
+    and donot give results like address, Account number, drivers license etc... which are not generally same pattern of regex throughout the world. 
+    can give 3 from the above and 2 random which are relevant to the input given.`;
+  };
+
+  const highPriorityPatterns = {
+    email: "\\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Z|a-z]{2,}\\b",
+    phone_number: "\\b\\d{3}[-.]?\\d{3}[-.]?\\d{4}\\b",  
+    ssn: "\\b(?!000|666|9\\d{2})\\d{3}-(?!00)\\d{2}-(?!0000)\\d{4}\\b",
+    credit_card: "\\b\\d{4}[- ]?\\d{4}[- ]?\\d{4}[- ]?\\d{4}\\b",
+    date_of_birth: "\\b(0[1-9]|1[0-2])\\/(0[1-9]|[12]\d|3[01])\\/(19|20)\d{2}\\b",
+    gender: "\\b(Male|Female)\\b",
+    ip_address: "\\b(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\b",
+    mac_address: "\\b(?:[0-9A-Fa-f]{2}[:-]){5}(?:[0-9A-Fa-f]{2})\\b",
+    iban: "\\b[A-Z]{2}\\d{2}[A-Z0-9]{11,30}\\b",
+    zip_code: "\\b\\d{5}(-\\d{4})?\\b"
+  };
+
+  function formatRegex(regexPattern) {
+    regexPattern = regexPattern.replace(/\\b/g, '').trim();  // Remove boundaries temporarily
+    regexPattern = regexPattern.replace(/\\d/g, '[0-9]');    // Replace \d with [0-9]
+    regexPattern = regexPattern.replace(/^\^|\$$/g, '');     // Remove leading ^ or trailing $
+    return `\\b${regexPattern}\\b`;                          // Add back word boundaries
+  }
+
+  function cleanRegexPattern(pattern) {
+    return pattern.replace(/["']/g, '');  // Remove any quotes
+  }
+
+  function validatePattern(key, generatedPattern) {
+    return highPriorityPatterns[key] === generatedPattern;
+  }
+
+  function customJSONParse(str) {
+    str = str.trim().replace(/^\{|\}$/g, '');
+    
+    const result = {};
+    let key = '';
+    let value = '';
+    let inQuotes = false;
+    let collectingKey = true;
+
+    for (let i = 0; i < str.length; i++) {
+      const char = str[i];
+      
+      if (char === '"' && str[i-1] !== '\\') {
+        inQuotes = !inQuotes;
+        if (!inQuotes && collectingKey) {
+          collectingKey = false;
+        }
+        continue;
+      }
+      
+      if (char === ':' && !inQuotes) {
+        collectingKey = false;
+        continue;
+      }
+      
+      if (char === ',' && !inQuotes) {
+        result[key.trim()] = value.trim();
+        key = '';
+        value = '';
+        collectingKey = true;
+        continue;
+      }
+      
+      if (collectingKey) {
+        key += char;
+      } else {
+        value += char;
+      }
+    }
+    
+    if (key && value) {
+      result[key.trim()] = value.trim();
+    }
+
+    return result;
+  }
+
+  try {
+    const prompt = generatePrompt(message);
+
+    const result = await axios.post(
+      'https://api.mistral.ai/v1/chat/completions',
+      {
+        model: 'mistral-medium',
+        messages: [{ role: 'user', content: prompt }],
+        max_tokens: 500
+      },
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${process.env.MISTRAL_API_KEY}`
+        }
+      }
+    );
+
+    if (!result.data || !result.data.choices || !result.data.choices[0].message) {
+      throw new Error('Unexpected response structure from Mistral API');
+    }
+
+    const generatedText = result.data.choices[0].message.content;
+    console.log('Generated Text:', generatedText);
+    
+    // Extract JSON object from the response
+    const jsonMatch = generatedText.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) {
+      throw new Error('No valid JSON object found in the response');
+    }
+
+    const jsonString = jsonMatch[0];
+    console.log('Extracted JSON String:', jsonString);
+    
+    // Use custom parsing function
+    const generatedRegex = customJSONParse(jsonString);
+    
+    // Format each regex pattern
+    const formattedRegex = Object.fromEntries(
+      Object.entries(generatedRegex).map(([key, value]) => {
+        const cleanedPattern = cleanRegexPattern(value);
+        const formattedPattern = formatRegex(cleanedPattern);
+        
+        // Use the validated pattern for high priority keys, otherwise use the formatted pattern
+        return [key, highPriorityPatterns[key] || formattedPattern];
+      })
+    );
+    
+    console.log('Formatted Regex:', formattedRegex);
+    return res.json({ pii: formattedRegex });
+  } catch (error) {
+    console.error('Error in Mistral API:', error);
+    return res.status(500).json({
+      error: 'Failed to get response from Mistral API',
+      details: error.message
+    });
+  }
+});
+
+// Mistral API integration for regex generation based on project genre for splunk
+app.post('/mistral-chat-splunk', async (req, res) => {
+  const { message } = req.body;
+
+  const generatePrompt = (msg) => {
+    return `Generate a set of regex patterns for identifying PII in a project related to ${msg}. The output should be a JSON object 
+    where each key represents a type of PII (e.g., 'ssn', 'email', 'phone_number') and its value is a regex pattern that matches that PII. Use the following formats:
+    - ssn: \\d{3}-\\d{2}-\\d{4},
+    - email: [\\w\\d\\.-]+@[\\w\\d\\.-]+,
+    - credit_card: \\b(?:\\d[ -]*?){13,16}\\b,
+    - ip_address: \\b(?:\\d{1,3}\\.){3}\\d{1,3}\\b,
+    - phone: \\b(?:\\(?\\d{3}\\)?[-.\\s]?|\\d{3}[-.\\s]?)\\d{3}[-.\\s]?\\d{4}\\b,
+    - password: \\bpassword\\s*[:=]\\s*\\S+\\b,
+    - cvv: \\b\\d{3,4}\\b,
+    - address: \\d+\\s[A-Za-z]+\\s[A-Za-z]+,
+    - url: \\bhttps?:\\/\\/[^\\s/$.?#].[^\\s]*\\b,
+    - mac_address: \\b([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})\\b
+
+    Provide at least 5 relevant PII types and their regex patterns. Only respond with the JSON object, no additional text. 
+    and donot give results like address, Account number, drivers license etc... which are not generally same pattern of regex throughout the world. 
+    can give 3 from the above and 2 random which are relevant to the input given.`;
+  };
+
+  const highPriorityPatterns = {
+    ssn: "\\d{3}-\\d{2}-\\d{4}",
+    email: "[\\w\\d\\.-]+@[\\w\\d\\.-]+",
+    credit_card: "\\b(?:\\d[ -]*?){13,16}\\b",
+    ip_address: "\\b(?:\\d{1,3}\\.){3}\\d{1,3}\\b",
+    phone: "\\b(?:\\(?\\d{3}\\)?[-.\\s]?|\\d{3}[-.\\s]?)\\d{3}[-.\\s]?\\d{4}\\b",
+    password: "\\bpassword\\s*[:=]\\s*\\S+\\b",
+    cvv: "\\b\\d{3,4}\\b",
+    address: "\\d+\\s[A-Za-z]+\\s[A-Za-z]+",
+    url: "\\bhttps?:\\/\\/[^\\s/$.?#].[^\\s]*\\b",
+    mac_address: "\\b([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})\\b"
+  };
+
+  function formatRegex(regexPattern) {
+    regexPattern = regexPattern.replace(/\\b/g, '').trim();  // Remove boundaries temporarily
+    regexPattern = regexPattern.replace(/\\d/g, '[0-9]');    // Replace \d with [0-9]
+    regexPattern = regexPattern.replace(/^\^|\$$/g, '');     // Remove leading ^ or trailing $
+    return `\\b${regexPattern}\\b`;                          // Add back word boundaries
+  }
+
+  function cleanRegexPattern(pattern) {
+    return pattern.replace(/["']/g, '');  // Remove any quotes
+  }
+
+  function validatePattern(key, generatedPattern) {
+    return highPriorityPatterns[key] === generatedPattern;
+  }
+
+  function customJSONParse(str) {
+    str = str.trim().replace(/^\{|\}$/g, '');
+    
+    const result = {};
+    let key = '';
+    let value = '';
+    let inQuotes = false;
+    let collectingKey = true;
+
+    for (let i = 0; i < str.length; i++) {
+      const char = str[i];
+      
+      if (char === '"' && str[i-1] !== '\\') {
+        inQuotes = !inQuotes;
+        if (!inQuotes && collectingKey) {
+          collectingKey = false;
+        }
+        continue;
+      }
+      
+      if (char === ':' && !inQuotes) {
+        collectingKey = false;
+        continue;
+      }
+      
+      if (char === ',' && !inQuotes) {
+        result[key.trim()] = value.trim();
+        key = '';
+        value = '';
+        collectingKey = true;
+        continue;
+      }
+      
+      if (collectingKey) {
+        key += char;
+      } else {
+        value += char;
+      }
+    }
+    
+    if (key && value) {
+      result[key.trim()] = value.trim();
+    }
+
+    return result;
+  }
+
+  try {
+    const prompt = generatePrompt(message);
+
+    const result = await axios.post(
+      'https://api.mistral.ai/v1/chat/completions',
+      {
+        model: 'mistral-medium',
+        messages: [{ role: 'user', content: prompt }],
+        max_tokens: 500
+      },
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${process.env.MISTRAL_API_KEY}`
+        }
+      }
+    );
+
+    if (!result.data || !result.data.choices || !result.data.choices[0].message) {
+      throw new Error('Unexpected response structure from Mistral API');
+    }
+
+    const generatedText = result.data.choices[0].message.content;
+    console.log('Generated Text:', generatedText);
+    
+    // Extract JSON object from the response
+    const jsonMatch = generatedText.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) {
+      throw new Error('No valid JSON object found in the response');
+    }
+
+    const jsonString = jsonMatch[0];
+    console.log('Extracted JSON String:', jsonString);
+    
+    // Use custom parsing function
+    const generatedRegex = customJSONParse(jsonString);
+    
+    // Format each regex pattern
+    const formattedRegex = Object.fromEntries(
+      Object.entries(generatedRegex).map(([key, value]) => {
+        const cleanedPattern = cleanRegexPattern(value);
+        const formattedPattern = formatRegex(cleanedPattern);
+        
+        // Use the validated pattern for high priority keys, otherwise use the formatted pattern
+        return [key, highPriorityPatterns[key] || formattedPattern];
+      })
+    );
+    
+    console.log('Formatted Regex:', formattedRegex);
+    return res.json({ pii: formattedRegex });
+  } catch (error) {
+    console.error('Error in Mistral API:', error);
+    return res.status(500).json({
+      error: 'Failed to get response from Mistral API',
+      details: error.message
+    });
+  }
+});
+
 
 app.use('/api/auth', authRoutes);
 
@@ -514,10 +807,58 @@ app.get('/google-client-id', (req, res) => {
   res.json({ clientId: process.env.GOOGLE_CLIENT_ID });
 });
 
-app.listen(port, () => {
-  connectToMongoDB();
-  logger.info(`Server is running on http://localhost:${port}`);
+const splunkSearchUrl = `https://${splunkHost}:${splunkPort}/services/search/jobs`;
+
+// Create a custom HTTPS agent that doesn't verify SSL certificates
+const agent = new https.Agent({
+  rejectUnauthorized: false
 });
+
+// Create an axios instance with the custom agent
+const axiosInstance = axios.create({
+  httpsAgent: agent,
+  auth: {
+    username: splunkUsername,
+    password: splunkPassword
+  }
+});
+
+app.post('/splunk-search', async (req, res) => {
+  const { index, fieldRegexPairs } = req.body;
+  
+  // Construct the search query
+  let searchQuery = `search index=${index || '*'}`;
+  
+  for (const [field, regex] of Object.entries(fieldRegexPairs)) {
+    // Use Splunk's search command syntax for regex extraction
+    searchQuery += ` | rex field=_raw "(?<${field}>${regex})"`;
+  }
+  
+  searchQuery += ' | table ' + Object.keys(fieldRegexPairs).join(', '); // To display the extracted fields
+  
+  try {
+    // Create a search query
+    const params = querystring.stringify({
+      search: searchQuery,
+      output_mode: 'json',
+      exec_mode: 'oneshot'  // This will make Splunk wait for the search to complete before responding
+    });
+
+    const createJobResponse = await axiosInstance.post(splunkSearchUrl, params, {
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded'
+      }
+    });
+
+    // The results are directly in the response
+    res.json(createJobResponse.data);
+
+  } catch (error) {
+    console.error('Error:', error.response ? error.response.data : error.message);
+    res.status(500).json({ error: 'An error occurred while querying Splunk', details: error.response ? error.response.data : error.message });
+  }
+});
+
 
 function analyzeLogContent(logContent) {
   const stats = {
@@ -528,3 +869,8 @@ function analyzeLogContent(logContent) {
   stats.totalLines = lines.length;
   return stats;
 }
+
+app.listen(port, () => {
+  connectToMongoDB();
+  logger.info(`Server is running on http://localhost:${port}`);
+});
