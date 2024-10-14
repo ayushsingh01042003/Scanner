@@ -123,43 +123,83 @@ const Overview = () => {
     }
   };
 
+  const handleKeyValuePairChangeSplunk = (index, keyOrValue, newValue) => {
+    const updatedKeyValuePairs = [...keyValuePairs];
+    updatedKeyValuePairs[index] = {
+      ...updatedKeyValuePairs[index],
+      [keyOrValue]: newValue
+    };
+    setKeyValuePairs(updatedKeyValuePairs);
+
+    if (keyOrValue === 'key') {
+      if (debounceTimeouts.current[index]) {
+        clearTimeout(debounceTimeouts.current[index]);
+      }
+      debounceTimeouts.current[index] = setTimeout(async () => {
+        if (newValue !== '') {
+          try {
+            const response = await fetch('http://localhost:3000/regexValue-splunk', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({ data: newValue })
+            });
+
+            if (!response.ok) {
+              throw new Error('Failed to fetch data');
+            }
+
+            const data = await response.json();
+
+            const updatedPairs = [...keyValuePairs];
+            updatedPairs[index] = { ...updatedPairs[index], key: newValue, value: data };
+            setKeyValuePairs(updatedPairs);
+          } catch (error) {
+            console.error('API Error:', error);
+          }
+        }
+      }, 1000);
+    }
+  };
+  
+  const [aiMessage, setAiMessage] = useState('');
+
+  // for normal static scans
   const handleAiMessageChange = (e) => {
     const newValue = e.target.value;
     setAiMessage(newValue);
-
+  
     if (debounceTimeouts.current.aiMessage) {
       clearTimeout(debounceTimeouts.current.aiMessage);
     }
-
+  
     debounceTimeouts.current.aiMessage = setTimeout(async () => {
       if (newValue !== '') {
         try {
-          const response = await fetch('http://localhost:3000/gemini-chat', {
+          const response = await fetch('http://localhost:3000/mistral-chat', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
             },
             body: JSON.stringify({ message: newValue }),
           });
-
+  
           if (!response.ok) {
             const errorData = await response.json();
-            throw new Error(errorData.details || 'Failed to get response from Gemini');
+            throw new Error(errorData.details || 'Failed to get response from AI chat');
           }
-
+  
           const data = await response.json();
-
-          try {
-            const cleanedPiiData = data.pii.replace(/```json\n|\n```/g, '');
-            const piiData = JSON.parse(cleanedPiiData);
-            const updatedKeyValuePairs = Object.entries(piiData).map(([key, value]) => ({
+  
+          if (typeof data.pii === 'object' && data.pii !== null) {
+            const updatedKeyValuePairs = Object.entries(data.pii).map(([key, value]) => ({
               key,
-              value: "\\b" + value.replace(/^\^|\$$/g, '').replace(/`/g, '') + "\\b"
+              value: value.replace(/^\^|\$$/g, '')
             }));
             setKeyValuePairs(updatedKeyValuePairs);
-          } catch (parseError) {
-            console.error('Error parsing PII data:', parseError);
-            console.error('Raw PII data:', data.pii);
+          } else {
+            console.error('Unexpected PII data format:', data.pii);
           }
         } catch (error) {
           console.error('Error in AI chat:', error);
@@ -167,6 +207,50 @@ const Overview = () => {
       }
     }, 1000);
   };
+
+  // for dynamic scans splunk based.
+  const handleAiMessageChangeSplunk = (e) => {
+    const newValue = e.target.value;
+    setAiMessage(newValue);
+  
+    if (debounceTimeouts.current.aiMessage) {
+      clearTimeout(debounceTimeouts.current.aiMessage);
+    }
+  
+    debounceTimeouts.current.aiMessage = setTimeout(async () => {
+      if (newValue !== '') {
+        try {
+          const response = await fetch('http://localhost:3000/mistral-chat-splunk', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ message: newValue }),
+          });
+  
+          if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.details || 'Failed to get response from AI chat');
+          }
+  
+          const data = await response.json();
+  
+          if (typeof data.pii === 'object' && data.pii !== null) {
+            const updatedKeyValuePairs = Object.entries(data.pii).map(([key, value]) => ({
+              key,
+              value: value.replace(/^\^|\$$/g, '')
+            }));
+            setKeyValuePairs(updatedKeyValuePairs);
+          } else {
+            console.error('Unexpected PII data format:', data.pii);
+          }
+        } catch (error) {
+          console.error('Error in AI chat:', error);
+        }
+      }
+    }, 1000);
+  };
+
 
   useEffect(() => {
 
@@ -516,59 +600,6 @@ const Overview = () => {
     }
   };
 
-  const [aiMessage, setAiMessage] = useState('');
-  const [aiResponse, setAiResponse] = useState('');
-
-
-  const handleAiChat = async () => {
-    setIsLoading(true);
-    try {
-      const response = await fetch('http://localhost:3000/gemini-chat', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ message: aiMessage }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.details || 'Failed to get response from Gemini');
-      }
-
-      const data = await response.json();
-      setAiResponse(data.pii);
-
-      try {
-        const cleanedPiiData = data.pii.replace(/```json\n|\n```/g, '');
-        const piiData = JSON.parse(cleanedPiiData);
-        const updatedKeyValuePairs = Object.entries(piiData).map(([key, value]) => ({
-          key,
-          value
-        }));
-        for (let i = 0; i < updatedKeyValuePairs.length; i++) {
-          updatedKeyValuePairs[i].value = "\\b" + updatedKeyValuePairs[i].value
-            .replace(/^\^|\$$/g, '')
-            .replace(/`/g, '')
-            + "\\b";
-        }
-        setKeyValuePairs(updatedKeyValuePairs);
-      } catch (parseError) {
-        console.error('Error parsing PII data:', parseError);
-        console.error('Raw PII data:', data.pii);  // Log the raw data for debugging
-        setAiResponse('Received response, but it was not in the expected format. Please try again or modify your input.');
-      }
-
-    } catch (error) {
-      console.error('Error in AI chat:', error);
-      setAiResponse(`Error: ${error.message}`);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-
-
   return (
     <>
       <div className="bg-[#121212] text-white min-h-screen p-8 w-full overflow-hidden ">
@@ -625,7 +656,7 @@ const Overview = () => {
                 <div className="flex items-stretch space-x-4">
                   <input
                     type="text"
-                    placeholder="Enter the genre of your project"
+                    placeholder="Describe your project for PII detection"
                     value={aiMessage}
                     onChange={handleAiMessageChange}
                     className="bg-[#282828] text-white rounded-2xl py-3 px-3 w-full focus:outline-none"
@@ -689,7 +720,7 @@ const Overview = () => {
                 <div className="flex items-stretch space-x-4">
                   <input
                     type="text"
-                    placeholder="Enter the genre of your project"
+                    placeholder="Describe your project for PII detection"
                     value={aiMessage}
                     onChange={handleAiMessageChange}
                     className="bg-[#282828] text-white rounded-2xl py-3 px-3 w-full focus:outline-none"
@@ -775,9 +806,9 @@ const Overview = () => {
                 <div className="flex items-stretch space-x-4">
                   <input
                     type="text"
-                    placeholder="Enter the genre of your project"
+                    placeholder="Describe your project for PII detection"
                     value={aiMessage}
-                    onChange={handleAiMessageChange}
+                    onChange={handleAiMessageChangeSplunk}
                     className="bg-[#282828] text-white rounded-2xl py-3 px-3 w-full focus:outline-none"
                   />
                 </div>
@@ -789,7 +820,7 @@ const Overview = () => {
                         type="text"
                         placeholder="Key"
                         value={pair.key}
-                        onChange={(e) => handleKeyValuePairChange(index, 'key', e.target.value)}
+                        onChange={(e) => handleKeyValuePairChangeSplunk(index, 'key', e.target.value)}
                         className="bg-[#282828] text-white rounded-2xl py-4 px-4 flex-1 focus:outline-none"
                       />
                       <input
