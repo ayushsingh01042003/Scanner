@@ -45,11 +45,6 @@ const splunkPort = process.env.SPLUNK_PORT;
 const splunkUsername = process.env.SPLUNK_USERNAME;
 const splunkPassword = process.env.SPLUNK_PASSWORD;
 
-const splunkHost = process.env.SPLUNK_HOST;
-const splunkPort = process.env.SPLUNK_PORT;
-const splunkUsername = process.env.SPLUNK_USERNAME;
-const splunkPassword = process.env.SPLUNK_PASSWORD;
-
 const octokit = new Octokit({ auth: process.env.GITHUB_TOKEN });
 
 app.post('/signup', async (req, res) => {
@@ -612,7 +607,6 @@ app.post('/mistral-chat', async (req, res) => {
     }
 
     const generatedText = result.data.choices[0].message.content;
-    console.log('Generated Text:', generatedText);
     
     // Extract JSON object from the response
     const jsonMatch = generatedText.match(/\{[\s\S]*\}/);
@@ -621,7 +615,6 @@ app.post('/mistral-chat', async (req, res) => {
     }
 
     const jsonString = jsonMatch[0];
-    console.log('Extracted JSON String:', jsonString);
     
     // Use custom parsing function
     const generatedRegex = customJSONParse(jsonString);
@@ -637,7 +630,6 @@ app.post('/mistral-chat', async (req, res) => {
       })
     );
     
-    console.log('Formatted Regex:', formattedRegex);
     return res.json({ pii: formattedRegex });
   } catch (error) {
     console.error('Error in Mistral API:', error);
@@ -769,7 +761,6 @@ app.post('/mistral-chat-splunk', async (req, res) => {
     }
 
     const generatedText = result.data.choices[0].message.content;
-    console.log('Generated Text:', generatedText);
     
     // Extract JSON object from the response
     const jsonMatch = generatedText.match(/\{[\s\S]*\}/);
@@ -778,7 +769,6 @@ app.post('/mistral-chat-splunk', async (req, res) => {
     }
 
     const jsonString = jsonMatch[0];
-    console.log('Extracted JSON String:', jsonString);
     
     // Use custom parsing function
     const generatedRegex = customJSONParse(jsonString);
@@ -794,7 +784,6 @@ app.post('/mistral-chat-splunk', async (req, res) => {
       })
     );
     
-    console.log('Formatted Regex:', formattedRegex);
     return res.json({ pii: formattedRegex });
   } catch (error) {
     console.error('Error in Mistral API:', error);
@@ -864,58 +853,6 @@ app.post('/splunk-search', async (req, res) => {
   }
 });
 
-const splunkSearchUrl = `https://${splunkHost}:${splunkPort}/services/search/jobs`;
-
-// Create a custom HTTPS agent that doesn't verify SSL certificates
-const agent = new https.Agent({
-  rejectUnauthorized: false
-});
-
-// Create an axios instance with the custom agent
-const axiosInstance = axios.create({
-  httpsAgent: agent,
-  auth: {
-    username: splunkUsername,
-    password: splunkPassword
-  }
-});
-
-app.post('/splunk-search', async (req, res) => {
-  const { index, fieldRegexPairs } = req.body;
-  
-  // Construct the search query
-  let searchQuery = `search index=${index || '*'}`;
-  
-  for (const [field, regex] of Object.entries(fieldRegexPairs)) {
-    // Use Splunk's search command syntax for regex extraction
-    searchQuery += ` | rex field=_raw "(?<${field}>${regex})"`;
-  }
-  
-  searchQuery += ' | table ' + Object.keys(fieldRegexPairs).join(', '); // To display the extracted fields
-  
-  try {
-    // Create a search query
-    const params = querystring.stringify({
-      search: searchQuery,
-      output_mode: 'json',
-      exec_mode: 'oneshot'  // This will make Splunk wait for the search to complete before responding
-    });
-
-    const createJobResponse = await axiosInstance.post(splunkSearchUrl, params, {
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded'
-      }
-    });
-
-    // The results are directly in the response
-    res.json(createJobResponse.data);
-
-  } catch (error) {
-    console.error('Error:', error.response ? error.response.data : error.message);
-    res.status(500).json({ error: 'An error occurred while querying Splunk', details: error.response ? error.response.data : error.message });
-  }
-});
-
 
 function analyzeLogContent(logContent) {
   const stats = {
@@ -926,11 +863,6 @@ function analyzeLogContent(logContent) {
   stats.totalLines = lines.length;
   return stats;
 }
-
-app.listen(port, () => {
-  connectToMongoDB();
-  logger.info(`Server is running on http://localhost:${port}`);
-});
 
 app.listen(port, () => {
   connectToMongoDB();
