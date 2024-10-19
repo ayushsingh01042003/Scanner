@@ -861,134 +861,135 @@ const Overview = () => {
 
           </div>
         </div>
+        <div className="w-[95%] mx-auto" style={{ height: '500px' }}>
+      <Suspense fallback={<Loading />}>
+        {isLoading ? (
+          <Loading />
+        ) : (
+          <div className={`flex ${scanOption === 'dynamic' ? 'flex-col' : 'flex-col md:flex-row'} gap-8`}>
+            <div 
+              className={`bg-[#2C2D2F] rounded-lg p-6 ${
+                scanOption === 'dynamic' ? 'w-full' : 'w-full md:w-[65%]'
+              } scrollable scrollbar-thin flex flex-col`} 
+              style={{ minHeight: '500px' }}
+            >
+              <h2 className="text-xl mb-4 text-gray-300">
+                {scanOption === 'dynamic' ? 'Log Analysis Results' : 'Results'}
+              </h2>
+              {scanOption === 'dynamic' && (
+                <p className="mb-2">Total Lines Analyzed: {numFiles}</p>
+              )}
+              {scanOption !== 'dynamic' && (
+                <p className="mb-2">Number of Files with PIIs found - {numFiles}</p>
+              )}
+              <div className="flex-grow overflow-x-auto scrollbar-thin">
+                <table className="min-w-full bg-[#2C2D2F] border-collapse border-gray-600 shadow-md rounded-lg overflow-hidden">
+                  <thead className="bg-[#2C2D2F] text-gray-300">
+                    <tr>
+                      <th className="py-2 px-4 border-b border-gray-600 text-left w-3/4">
+                        {scanOption === 'dynamic' ? 'Log Entry' : 'File path'}
+                      </th>
+                      <th className="py-2 px-4 border-b border-gray-600 text-right w-1/4">
+                        {scanOption === 'dynamic' ? 'Vulnerabilities' : 'No. of PIIs found'}
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="text-gray-400">
+                    {Object.entries(results).map(([key, value]) => {
+                      let displayKey = key;
+                      let displayValue = value;
 
-        <div className="flex flex-col md:flex-row gap-8 w-[95%] mx-auto" style={{ height: '500px' }}>
-          <Suspense fallback={<Loading />}>
-            {isLoading ? (
-              <Loading />
-            ) : (
-              <>
-                <div className="bg-[#2C2D2F] rounded-lg p-6 w-[65%] scrollable scrollbar-thin flex flex-col" style={{ minHeight: '500px' }}>
-                  {/* <h2 className="text-xl mb-4 text-gray-300">Results</h2>
-            <p className="mb-2">Number of Files with PIIs found - {numFiles}</p> */}
-                  <h2 className="text-xl mb-4 text-gray-300">
-                    {scanOption === 'dynamic' ? 'Log Analysis Results' : 'Results'}
-                  </h2>
-                  <p className="mb-2">
-                    {scanOption === 'dynamic'
-                      ? `Total Lines Analyzed: ${numFiles}`
-                      : `Number of Files with PIIs found - ${numFiles}`}
-                  </p>
-                  <div className="flex-grow overflow-x-auto scrollbar-thin">
-                    <table className="min-w-full bg-[#2C2D2F] border-collapse border-gray-600 shadow-md rounded-lg overflow-hidden">
-                      <thead className="bg-[#2C2D2F] text-gray-300">
-                        <tr>
-                          <th className="py-2 px-4 border-b border-gray-600 text-left w-3/4">File path</th>
-                          <th className="py-2 px-4 border-b border-gray-600 text-right w-1/4">No. of PIIs found</th>
+                      if (scanOption === 'dynamic') {
+                        // For dynamic scans, key is the log entry and value is the vulnerability count
+                        displayValue = value;
+                      } else {
+                        // For other scan types, calculate PII count
+                        displayValue = typeof value === 'number' ? value :
+                          (Array.isArray(value) ? value.length :
+                            (typeof value === 'object' ? Object.values(value).flat().length : 0));
+                      }
+
+                      return (
+                        <tr key={key}>
+                          <td className="py-2 px-4 border-b border-gray-600 text-left">{displayKey}</td>
+                          <td className="py-2 px-4 border-b border-gray-600 text-right">{displayValue}</td>
                         </tr>
-                      </thead>
-                      <tbody className="text-gray-400">
-                        {Object.entries(results).map(([filePath, piiData]) => {
-                          let piiCount;
-                          if (scanOption === 'dynamic') {
-                            // For dynamic scans, piiData is the direct count of vulnerabilities
-                            piiCount = piiData;
-                          } else {
-                            // For other scan types, keep the existing logic
-                            piiCount = typeof piiData === 'number' ? piiData :
-                              (Array.isArray(piiData) ? piiData.length :
-                                (typeof piiData === 'object' ? Object.values(piiData).flat().length : 0));
-                          }
-
-                          return (
-                            <tr key={filePath}>
-                              <td className="py-2 px-4 border-b border-gray-600 text-left">{filePath}</td>
-                              <td className="py-2 px-4 border-b border-gray-600 text-right">{piiCount}</td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-                  <div className="mt-4 flex justify-end">
-                    <button
-                      className="bg-[#a4ff9e] hover:bg-black hover:text-[#a4ff9e] hover:font-bold font-bold text-[#000000] py-2 px-4 rounded transition duration-300"
-                      onClick={handleGenerateReport}
-                    >
-                      Generate Report
-                    </button>
-                  </div>
-                </div>
-                <div className="bg-[#2C2D2F] rounded-lg p-6 w-[35%] scrollable scrollbar-thin flex flex-col" style={{ minHeight: '500px' }}>
-                  {/* <h2 className="text-xl mb-4 text-gray-300">Repository Info</h2> */}
-                  <h2 className="text-xl mb-4 text-gray-300">
-                    {scanOption === 'dynamic' ? 'Log Statistics' : 'Repository Info'}
-                  </h2>
-                  <div className="flex flex-grow flex-col">
-                    {Object.values(repoInfo).some(value => value !== 0) ? (
-                      <>
-                        <div className="mb-4 max-h-64 overflow-y-auto scrollbar-thin">
-                          <div className="grid grid-cols-5 gap-2 ">
-                            {Object.entries(repoInfo)
-                              .sort(([, a], [, b]) => b - a)
-                              .map(([lang, value]) => (
-                                <p key={lang} className="mb-2 text-sm">
-                                  {lang}: {typeof value === 'number' ? `${value.toFixed(2)}%` : value}
-                                </p>
-                              ))}
-                          </div>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+              <div className="mt-4 flex justify-end">
+                <button
+                  className="bg-[#a4ff9e] hover:bg-black hover:text-[#a4ff9e] hover:font-bold font-bold text-[#000000] py-2 px-4 rounded transition duration-300"
+                  onClick={handleGenerateReport}
+                >
+                  Generate Report
+                </button>
+              </div>
+            </div>
+            {scanOption !== 'dynamic' && (
+              <div className="bg-[#2C2D2F] rounded-lg p-6 w-full md:w-[35%] scrollable scrollbar-thin flex flex-col" style={{ minHeight: '500px' }}>
+                <h2 className="text-xl mb-4 text-gray-300">Repository Info</h2>
+                <div className="flex flex-grow flex-col">
+                  {Object.values(repoInfo).some(value => value !== 0) ? (
+                    <>
+                      <div className="mb-4 max-h-64 overflow-y-auto scrollbar-thin">
+                        <div className="grid grid-cols-5 gap-2 ">
+                          {Object.entries(repoInfo)
+                            .sort(([, a], [, b]) => b - a)
+                            .map(([lang, value]) => (
+                              <p key={lang} className="mb-2 text-sm">
+                                {lang}: {typeof value === 'number' ? `${value.toFixed(2)}%` : value}
+                              </p>
+                            ))}
                         </div>
-                        <div style={{ width: '100%', height: '300px', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-                          <div style={{ width: '100%', maxWidth: '300px', height: '300px' }}>
-                            <Pie data={chartData} options={{
-                              responsive: true,
-                              maintainAspectRatio: false,
-                              plugins: {
-                                legend: {
-                                  position: 'bottom',
-                                  labels: {
-                                    boxWidth: 12,
-                                    font: {
-                                      size: 15,
-                                    },
-                                    padding: 10,
-                                  }
-                                },
-                                tooltip: {
-                                  callbacks: {
-                                    label: function (context) {
-                                      let label = context.label || '';
-                                      if (label) {
-                                        label += ': ';
-                                      }
-                                      if (context.parsed !== undefined) {
-                                        label += context.parsed;
-                                        if (scanOption === 'dynamic') {
-                                          const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                                          const percentage = ((context.parsed / total) * 100).toFixed(2);
-                                          label += ` (${percentage}%)`;
-                                        } else {
-                                          label += '%';
-                                        }
-                                      }
-                                      return label;
+                      </div>
+                      <div style={{ width: '100%', height: '300px', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                        <div style={{ width: '100%', maxWidth: '300px', height: '300px' }}>
+                          <Pie data={chartData} options={{
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                              legend: {
+                                position: 'bottom',
+                                labels: {
+                                  boxWidth: 12,
+                                  font: {
+                                    size: 15,
+                                  },
+                                  padding: 10,
+                                }
+                              },
+                              tooltip: {
+                                callbacks: {
+                                  label: function (context) {
+                                    let label = context.label || '';
+                                    if (label) {
+                                      label += ': ';
                                     }
+                                    if (context.parsed !== undefined) {
+                                      label += `${context.parsed}%`;
+                                    }
+                                    return label;
                                   }
                                 }
                               }
-                            }} />
-                          </div>
+                            }
+                          }} />
                         </div>
-                      </>
-                    ) : (
-                      <p className="text-gray-400 text-center">Perform scan</p>
-                    )}
-                  </div>
+                      </div>
+                    </>
+                  ) : (
+                    <p className="text-gray-400 text-center">Perform scan</p>
+                  )}
                 </div>
-              </>
+              </div>
             )}
-          </Suspense>
-        </div>
+          </div>
+        )}
+      </Suspense>
+    </div>
       </div>
     </>
 
