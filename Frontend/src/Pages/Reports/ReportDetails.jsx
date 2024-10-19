@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import jsPDF from 'jspdf';
 import EmailModal from '../../components/EmailModal';
-import { MdDelete } from 'react-icons/md'; // Import the delete icon from react-icons/md
+import { MdDelete } from 'react-icons/md';
 
 const ReportDetails = () => {
   const [projects, setProjects] = useState([]);
@@ -13,6 +13,8 @@ const ReportDetails = () => {
   const [error, setError] = useState(null);
   const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
   const [email, setEmail] = useState('');
+  const [reportType, setReportType] = useState('static');
+  const [splunkResults, setSplunkResults] = useState(null);
 
   useEffect(() => {
     fetchAllProjects();
@@ -23,6 +25,15 @@ const ReportDetails = () => {
       fetchScanDetails(selectedScanId);
     }
   }, [selectedScanId]);
+
+  useEffect(() => {
+    if (reportType === 'dynamic' && selectedScanId) {
+      if (scanDetails && scanDetails.reportData && scanDetails.reportData.splunkQuery) {
+        const { index, fieldRegexPairs } = scanDetails.reportData.splunkQuery;
+        fetchSplunkResults(index, fieldRegexPairs);
+      }
+    }
+  }, [reportType, selectedScanId, scanDetails]);
 
   const fetchAllProjects = async () => {
     try {
@@ -42,7 +53,6 @@ const ReportDetails = () => {
       const response = await axios.get(`http://localhost:3000/getReport/${scanId}`);
       const scanData = response.data;
 
-      // Fetch project details if not included in the scan data
       if (scanData.project && typeof scanData.project === 'string') {
         const projectResponse = await axios.get(`http://localhost:3000/getProject/${scanData.project}`);
         scanData.project = projectResponse.data;
@@ -57,61 +67,111 @@ const ReportDetails = () => {
     }
   };
 
-  const formatScanDetails = () => {
-    if (!scanDetails || !scanDetails.reportData) return '';
-
-    let formattedDetails = '';
-
-    // Handle dynamic scan (based on logStats)
-    if (scanDetails.reportData.logStats) {
-      formattedDetails += 'Dynamic Scan Statistics:\n';
-      formattedDetails += `Total Lines: ${scanDetails.reportData.logStats.totalLines}\n`;
-      if (scanDetails.reportData.vulnerabilities) {
-        formattedDetails += 'Vulnerabilities:\n';
-        Object.entries(scanDetails.reportData.vulnerabilities).forEach(([type, instances]) => {
-          formattedDetails += `${type.toUpperCase()}:\n`;
-          instances.forEach(instance => {
-            // Extract line number from the instance string
-            const match = instance.match(/\(line (\d+)\)/);
-            const lineNumber = match ? match[1] : 'Unknown';
-            const content = instance.replace(/\(line \d+\)/, '').trim();
-            formattedDetails += `  Line: ${lineNumber}, Content: ${content}\n`;
-          });
-          formattedDetails += '\n';
-        });
-      }
-    } else {
-      // Handle regular scan (based on scanDetails)
-      if (scanDetails.reportData.scanDetails) {
-        formattedDetails += 'Vulnerabilities:\n';
-        Object.entries(scanDetails.reportData.scanDetails).forEach(([type, files]) => {
-          formattedDetails += `${type.toUpperCase()}:\n`;
-          Object.entries(files).forEach(([file, instances]) => {
-            formattedDetails += `  Path: ${file}\n`;
-            if (Array.isArray(instances)) {
-              formattedDetails += `  Instances: ${instances.join(', ')}\n`;
-            } else if (typeof instances === 'object') {
-              formattedDetails += `  Instances: ${JSON.stringify(instances)}\n`;
-            } else {
-              formattedDetails += `  Instances: ${instances}\n`;
-            }
-          });
-          formattedDetails += '\n';
-        });
-      }
-
-      // Handle regular scan language statistics
-      if (scanDetails.reportData.stats) {
-        formattedDetails += 'Language Statistics:\n';
-        Object.entries(scanDetails.reportData.stats).forEach(([language, percentage]) => {
-          formattedDetails += `${language}: ${percentage.toFixed(2)}%\n`;
-        });
-      }
+  const fetchSplunkResults = async (index, fieldRegexPairs) => {
+    try {
+      setLoading(true);
+      const response = await axios.post('http://localhost:3000/splunk-search', {
+        index,
+        fieldRegexPairs
+      });
+      setSplunkResults(response.data);
+      setLoading(false);
+    } catch (err) {
+      console.error('Error fetching Splunk results:', err);
+      setError('Failed to fetch Splunk results');
+      setLoading(false);
     }
-
-    return formattedDetails;
   };
 
+  const formatSplunkResults = () => {
+    if (!splunkResults || !splunkResults.results) return '';
+
+    let formattedResults = 'Splunk Search Results:\n\n';
+    splunkResults.results.forEach((result, index) => {
+      formattedResults += `Result ${index + 1}:\n`;
+      Object.entries(result).forEach(([field, value]) => {
+        formattedResults += `  ${field}: ${value}\n`;
+      });
+      formattedResults += '\n';
+    });
+    return formattedResults;
+  };
+
+  const formatScanDetails = () => {
+    if (!scanDetails || !scanDetails.reportData) {
+      console.error('Missing scanDetails or reportData');
+      return 'Error: Scan details not available';
+    }
+  
+    let formattedDetails = '';
+  
+    formattedDetails += `Username: ${scanDetails.username}\n`;
+    formattedDetails += `Project: ${scanDetails.project.projectName}\n`;
+    formattedDetails += `Timestamp: ${new Date(scanDetails.timestamp).toLocaleString()}\n\n`;
+  
+    try {
+      if (scanDetails.scanType === 'dynamic') {
+        formattedDetails += formatDynamicScanResults(scanDetails.reportData);
+      } else {
+        formattedDetails += formatStaticScanResults(scanDetails.reportData);
+      }
+    } catch (error) {
+      console.error('Error formatting scan details:', error);
+      formattedDetails += `Error formatting scan details: ${error.message}\n`;
+    }
+  
+    return formattedDetails || 'No scan details available';
+  };
+  
+  const formatDynamicScanResults = (reportData) => {
+    let formattedDetails = 'Dynamic Scan Results:\n';
+    formattedDetails += 'Dynamic Scan Statistics:\n';
+    formattedDetails += 'Vulnerabilities:\n';
+  
+    if (reportData.vulnerabilities && Array.isArray(reportData.vulnerabilities)) {
+      reportData.vulnerabilities.forEach((vulnerability, index) => {
+        formattedDetails += `${index}:\n`;
+        Object.entries(vulnerability).forEach(([key, value]) => {
+          if (key !== 'filePath') {
+            formattedDetails += `  ${key}: ${value}\n`;
+          }
+        });
+        if (vulnerability.filePath) {
+          formattedDetails += `  filePath: ${vulnerability.filePath}\n`;
+        }
+        formattedDetails += '\n';
+      });
+    }
+  
+    return formattedDetails;
+  };
+  
+  const formatStaticScanResults = (reportData) => {
+    let formattedDetails = 'Vulnerabilities Found and Language Statistics:\n';
+    formattedDetails += 'Vulnerabilities:\n';
+  
+    if (reportData.scanDetails) {
+      Object.entries(reportData.scanDetails).forEach(([vulnerabilityType, files]) => {
+        formattedDetails += `${vulnerabilityType.toUpperCase()}:\n`;
+        Object.entries(files).forEach(([filePath, instances]) => {
+          formattedDetails += `  Path: ${filePath}\n`;
+          instances.forEach(instance => {
+            formattedDetails += `    ${instance}\n`;
+          });
+        });
+        formattedDetails += '\n';
+      });
+    }
+  
+    if (reportData.stats) {
+      formattedDetails += 'Language Statistics:\n';
+      Object.entries(reportData.stats).forEach(([language, percentage]) => {
+        formattedDetails += `${language}: ${typeof percentage === 'number' ? percentage.toFixed(2) : percentage}%\n`;
+      });
+    }
+  
+    return formattedDetails;
+  };
 
   const handleDownloadReport = () => {
     if (!scanDetails || !scanDetails.project) return;
@@ -122,7 +182,7 @@ const ReportDetails = () => {
     Timestamp: ${scanDetails.timestamp}
     
     ${formatScanDetails()}
-    ;`
+    `;
 
     const doc = new jsPDF();
     doc.setFontSize(10);
@@ -187,6 +247,67 @@ const ReportDetails = () => {
     }
   };
 
+  const renderProjectList = () => {
+    return projects
+      .filter(project => {
+        if (reportType === 'static') {
+          return !project.scans.some(scan => scan.scanType === 'dynamic');
+        } else {
+          return project.scans.some(scan => scan.scanType === 'dynamic');
+        }
+      })
+      .map(project => (
+        <li key={project._id} className="mb-4">
+          <div
+            className={`cursor-pointer hover:text-white p-2 rounded flex items-center justify-between ${project._id === selectedProjectId ? 'bg-[#1c1c1c] text-white' : 'text-gray-400'}`}
+            onClick={() => setSelectedProjectId(project._id)}
+          >
+            <div className="flex-1">
+              <div className="flex items-center">
+                <div>{project.projectName}</div>
+              </div>
+              <div className="text-sm text-gray-500">{new Date(project.createdAt).toLocaleString()}</div>
+            </div>
+            <button
+              className="ml-4 p-1 hover:bg-red-700 transition duration-300"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleDeleteProject(project._id);
+              }}
+            >
+              <MdDelete />
+            </button>
+          </div>
+          {project._id === selectedProjectId && (
+            <ul className="ml-4 mt-2">
+              {project.scans
+                .filter(scan => reportType === 'dynamic' ? scan.scanType === 'dynamic' : scan.scanType !== 'dynamic')
+                .map(scan => (
+                  <li
+                    key={scan._id}
+                    className={`cursor-pointer hover:text-white p-1 rounded flex justify-between items-center ${scan._id === selectedScanId ? 'bg-[#121212] text-white' : 'text-gray-500'}`}
+                    onClick={() => setSelectedScanId(scan._id)}
+                  >
+                    Scan: {new Date(scan.timestamp).toLocaleString()} | Run by: {scan.username}
+                    {scan._id === selectedScanId && (
+                      <button
+                        className="ml-4 p-1 hover:bg-red-700 transition duration-300"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteScan(scan._id);
+                        }}
+                      >
+                        <MdDelete />
+                      </button>
+                    )}
+                  </li>
+                ))}
+            </ul>
+          )}
+        </li>
+      ));
+  };
+
   if (loading) return <div>Loading...</div>;
   if (error) return <div>{error}</div>;
 
@@ -195,60 +316,32 @@ const ReportDetails = () => {
       <div className="flex flex-col w-full">
         <div className="w-full block p-8">
           <h1 className="text-lg text-[#a4ff9e]">Scanner</h1>
-          <h1 className="text-4xl font-bold text-white mb-6">Reports</h1>
+          <h1 className="text-4xl font-bold text-white ">Reports</h1>
         </div>
+        <div className="mb-8">
+          <div className="flex space-x-4">
+            <button
+              aria-pressed={reportType === 'static'}
+              className={`ml-9 bg-[#19191A] hover:bg-[#2c2c2e] border border-gray-700 text-white py-4 px-12 rounded-2xl transition duration-300 ${reportType === 'static' ? 'bg-[#2C2D2F]' : ''}`}
+              onClick={() => setReportType('static')}
+            >
+              Static
+            </button>
+            <button
+              aria-pressed={reportType === 'dynamic'}
+              className={`bg-[#19191A] hover:bg-[#2c2c2e] border border-gray-700 text-white py-4 px-12 rounded-2xl transition duration-300 ${reportType === 'dynamic' ? 'bg-[#2C2D2F]' : ''}`}
+              onClick={() => setReportType('dynamic')}
+            >
+              Dynamic
+            </button>
+          </div>  
+        </div>
+
         <div className="flex w-[95%] h-full mx-auto">
           <section className="w-1/3 bg-[#2C2D2F] text-white p-6 mb-4 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-gray-800 rounded-lg" style={{ maxHeight: '100vh', minHeight: 0 }}>
             <h2 className="text-xl mb-4 text-grey-300">Recent Projects</h2>
             <ul>
-              {projects.map(project => (
-                <li key={project._id} className="mb-4">
-                  <div
-                    className={`cursor-pointer hover:text-white p-2 rounded flex items-center justify-between ${project._id === selectedProjectId ? 'bg-[#1c1c1c] text-white' : 'text-gray-400'}`}
-                    onClick={() => setSelectedProjectId(project._id)}
-                  >
-                    <div className="flex-1">
-                      <div className="flex items-center">
-                        <div>{project.projectName}</div>
-                      </div>
-                      <div className="text-sm text-gray-500">{new Date(project.createdAt).toLocaleString()}</div>
-                    </div>
-                    <button
-                      className="ml-4 p-1 hover:bg-red-700 transition duration-300"
-                      onClick={(e) => {
-                        e.stopPropagation(); // Prevent the click event from triggering the onClick of the project name
-                        handleDeleteProject(project._id);
-                      }}
-                    >
-                      <MdDelete />
-                    </button>
-                  </div>
-                  {project._id === selectedProjectId && (
-                    <ul className="ml-4 mt-2">
-                      {project.scans.map(scan => (
-                        <li
-                          key={scan._id}
-                          className={`cursor-pointer hover:text-white p-1 rounded flex justify-between items-center ${scan._id === selectedScanId ? 'bg-[#121212] text-white' : 'text-gray-500'}`}
-                          onClick={() => setSelectedScanId(scan._id)}
-                        >
-                          Scan: {new Date(scan.timestamp).toLocaleString()} | Run by: {scan.username}
-                          {scan._id === selectedScanId && (
-                            <button
-                              className="ml-4 p-1 hover:bg-red-700 transition duration-300"
-                              onClick={(e) => {
-                                e.stopPropagation(); // Prevent the click event from triggering the onClick of the scan item
-                                handleDeleteScan(scan._id);
-                              }}
-                            >
-                              <MdDelete />
-                            </button>
-                          )}
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </li>
-              ))}
+              {renderProjectList()}
             </ul>
           </section>
 
@@ -264,7 +357,7 @@ const ReportDetails = () => {
                   <strong>Timestamp:</strong> {new Date(scanDetails.timestamp).toLocaleString()}
                   <br />
                   <br />
-                  <strong>Vulnerabilities Found and Language Statistics:</strong><br />
+                  <strong>{reportType === 'dynamic' ? 'Dynamic Scan Results:' : 'Vulnerabilities Found and Language Statistics:'}</strong><br />
                   {formatScanDetails()}
                 </pre>
               ) : (
@@ -280,8 +373,10 @@ const ReportDetails = () => {
                   Download Report
                 </button>
 
-                <button className="mt-4 p-2 bg-[#a4ff9e] hover:bg-black hover:text-[#aeff9e] text-black py-3 px-7 rounded-lg w-54 transition duriation-300 font-bold "
-                  style={{ margin: "10px" }} onClick={() => setIsEmailModalOpen(true)}
+                <button
+                  className="mt-4 p-2 bg-[#a4ff9e] hover:bg-black hover:text-[#aeff9e] text-black py-3 px-7 rounded-lg w-54 transition duriation-300 font-bold"
+                  style={{ margin: "10px" }}
+                  onClick={() => setIsEmailModalOpen(true)}
                 >
                   Email Report
                 </button>
@@ -293,12 +388,12 @@ const ReportDetails = () => {
                   setEmail={setEmail}
                   onSend={handleSendEmail}
                 />
-
               </>
             )}
           </section>
         </div>
-      </div></>
+      </div>
+    </>
   );
 };
 

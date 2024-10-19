@@ -7,9 +7,6 @@ import axios from 'axios';
 
 infinity.register()
 
-// Default values shown
-
-
 ChartJS.register(ArcElement, Tooltip, Legend);
 
 const Loading = () => (
@@ -25,8 +22,6 @@ const Loading = () => (
   </div>
 );
 
-
-
 const Overview = () => {
   const [scanOption, setScanOption] = useState('github');
   const [url, setUrl] = useState('');
@@ -34,10 +29,6 @@ const Overview = () => {
   const [scanReportData, setScanReportData] = useState({ keyCounts: {}, keyPercentages: {} });
   const [numFiles, setNumFiles] = useState(0);
   const [repoInfo, setRepoInfo] = useState({
-    Java: 0,
-    Python: 0,
-    HTML: 0,
-    JavaScript: 0,
   });
   const [results, setResults] = useState({});
   const [repoDetails, setRepoDetails] = useState({ owner: '', repo: '' });
@@ -46,15 +37,27 @@ const Overview = () => {
   const [statsData, setStatsData] = useState(null);
   const [scanData, setScanData] = useState(null);
   const { username } = useContext(AuthContext);
-
-  const [host, setHost] = useState('');
-  const [port, setPort] = useState('22');
-  const [logusername, setUsername] = useState('');
-  const [privateKeyPath, setPrivateKeyPath] = useState('');
-  const [logFilePath, setLogFilePath] = useState('');
+  // const [vulnerabilityChartData, setVulnerabilityChartData] = useState({
+  //   labels: [],
+  //   datasets: [{
+  //     data: [],
+  //     backgroundColor: [],
+  //     hoverBackgroundColor: []
+  //   }]
+  // });
+  const [indexing, setIndexing] = useState('');
   const [scanResults, setScanResults] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [totalPII, setTotalPII] = useState(0);
+  const [chartData, setChartData] = useState({
+    labels: [],
+    datasets: [{
+      data: [],
+      backgroundColor: [],
+      hoverBackgroundColor: []
+    }]
+  });
 
   const generateColors = (count) => {
     const hueStep = 360 / count;
@@ -65,21 +68,7 @@ const Overview = () => {
   };
 
   const [logStats, setLogStats] = useState(null);
-  const [logNumFiles, setLogNumFiles] = useState(0);
-
-  const [chartData, setChartData] = useState(() => {
-    const initialColors = generateColors(4);
-    return {
-      labels: [],
-      datasets: [
-        {
-          data: [],
-          backgroundColor: [],
-          hoverBackgroundColor: []
-        }
-      ]
-    };
-  });
+  const [logNumFiles, setLogNumFiles] = useState(0); 
 
   const debounceTimeouts = useRef({});
 
@@ -162,6 +151,7 @@ const Overview = () => {
       }, 1000);
     }
   };
+
   
   const [aiMessage, setAiMessage] = useState('');
 
@@ -251,6 +241,37 @@ const Overview = () => {
     }, 1000);
   };
 
+  useEffect(() => {
+    if (scanOption === 'dynamic' && statsData) {
+      const logLevels = ['info', 'warn', 'error', 'debug'];
+      const data = logLevels.map(level => statsData[`${level}Count`] || 0);
+      const colors = generateColors(logLevels.length);
+  
+      setChartData({
+        labels: logLevels.map(level => level.charAt(0).toUpperCase() + level.slice(1)),
+        datasets: [{
+          data: data,
+          backgroundColor: colors,
+          hoverBackgroundColor: colors
+        }]
+      });
+    } else if (Object.values(repoInfo).length > 0) {
+      const topLanguages = Object.entries(repoInfo)
+        .sort(([, a], [, b]) => b - a)
+        .slice(0, 10);
+  
+      const colors = generateColors(topLanguages.length);
+  
+      setChartData({
+        labels: topLanguages.map(([lang]) => lang),
+        datasets: [{
+          data: topLanguages.map(([, value]) => value),
+          backgroundColor: colors,
+          hoverBackgroundColor: colors
+        }]
+      });
+    }
+  }, [scanOption, repoInfo, statsData]);
 
   useEffect(() => {
 
@@ -291,28 +312,6 @@ const Overview = () => {
     };
 
     fetchScanReportData();
-  }, []);
-
-  useEffect(() => {
-    async function fetchLogStats() {
-      try {
-        const response = await axios.post('/dynamic-log-stats', {
-          host: 'your.remote.server',
-          port: 22,
-          logusername: 'your-username',
-          privateKeyPath: '/path/to/your/private-key',
-          logFilePath: '/path/to/remote/logfile.log'
-        });
-        const data = response.data;
-
-        setLogStats(data);
-        setLogNumFiles(data.totalLines);
-      } catch (error) {
-        console.error('Failed to fetch log statistics:', error);
-      }
-    }
-
-    fetchLogStats();
   }, []);
 
   const handleScanClick = async () => {
@@ -407,7 +406,7 @@ const Overview = () => {
 
         setStatsData(statsData);
         setScanData(scanData);
-        setRepoInfo(statsData);
+        // setRepoInfo(statsData);
 
         const processedResults = Object.entries(scanData).reduce((acc, [piiType, files]) => {
           Object.entries(files).forEach(([filePath, piiInstances]) => {
@@ -447,68 +446,71 @@ const Overview = () => {
     else if (scanOption === 'dynamic') {
       try {
         setIsLoading(true);
-        console.log('Sending request to /dynamic-log-stats');
-        const statsResponse = await fetch('http://localhost:3000/dynamic-log-stats', {
+        console.log('Sending request to /splunk-search');
+        const scanResponse = await fetch('http://localhost:3000/splunk-search', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            host,
-            port: parseInt(port),
-            logusername,
-            privateKeyPath,
-            logFilePath,
+            index: indexing,
+            fieldRegexPairs: Object.fromEntries(keyValuePairs.map(pair => [pair.key, pair.value]))
           }),
         });
-
-        console.log('Sending request to /scan-remote-log');
-        const scanResponse = await fetch('http://localhost:3000/scan-remote-log', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            host,
-            port: parseInt(port),
-            logusername,
-            privateKeyPath,
-            logFilePath,
-            regexPairs: Object.fromEntries(keyValuePairs.map(pair => [pair.key, pair.value]))
-          }),
-        });
-
-        if (!statsResponse.ok || !scanResponse.ok) {
+        if (!scanResponse.ok) {
           throw new Error('Failed to fetch dynamic log stats or scan data');
         }
-
-        const statsData = await statsResponse.json();
         const scanData = await scanResponse.json();
-
-        setStatsData(statsData);
         setScanData(scanData);
-        setRepoInfo({
-          TotalLines: statsData.totalLines,
+    
+        const processedResults = {};
+        let totalPIICount = 0;
+        scanData.results.forEach(result => {
+          const filePath = result.filePath || result.source;
+          if (!processedResults[filePath]) {
+            processedResults[filePath] = 0;
+          }
+          const piiCount = Object.keys(result).filter(key =>
+            key !== 'filePath' && key !== 'source' && result[key]
+          ).length;
+          processedResults[filePath] += piiCount;
+          totalPIICount += piiCount;
         });
-
-        // Update this part to correctly set the number of vulnerabilities
-        const vulnerabilityCount = Object.values(scanData.vulnerabilities).reduce((sum, instances) => sum + instances.length, 0);
-        const processedResults = {
-          [logFilePath]: vulnerabilityCount
-        };
-
         setResults(processedResults);
-        setNumFiles(statsData.totalLines); // Set to total lines scanned instead of 1
-
-        const colors = generateColors(1);
+        setTotalPII(totalPIICount);
+        setNumFiles(Object.keys(processedResults).length);
+    
+        // Update chart data
+        const chartLabels = Object.keys(processedResults);
+        const chartDataValues = Object.values(processedResults);
+        const colors = generateColors(chartLabels.length);
         setChartData({
-          labels: ['Total Lines'],
+          labels: chartLabels,
           datasets: [{
-            data: [statsData.totalLines],
+            data: chartDataValues,
             backgroundColor: colors,
             hoverBackgroundColor: colors
           }]
         });
+    
+        // Set statsData for dynamic scan
+        setStatsData({
+          totalPII: totalPIICount,
+          numFiles: Object.keys(processedResults).length,
+          results: processedResults,
+          chartData: {
+            labels: chartLabels,
+            datasets: [{
+              data: chartDataValues,
+              backgroundColor: colors,
+              hoverBackgroundColor: colors
+            }]
+          }
+        });
+    
+        console.log('Dynamic scan completed. scanData:', scanData);
+        console.log('Dynamic scan completed. statsData:', statsData);
+    
       } catch (error) {
         console.error('Error during dynamic log scan:', error);
         setError(error.message);
@@ -542,16 +544,18 @@ const Overview = () => {
     }
 
     if (!statsData || !scanData) {
+      console.error('Stats Data or Scan Data is missing');
       alert('Please perform a scan before generating a report');
       return;
     }
-
+  
     const reportData = {
       scanDetails: scanData,
       stats: statsData,
       logStats: scanOption === 'dynamic' ? statsData : null,
-      vulnerabilities: scanOption === 'dynamic' ? scanData.vulnerabilities : null,
+      vulnerabilities: scanOption === 'dynamic' ? scanData.results : null,
     };
+    console.log('Report Data:', reportData);
 
     try {
       const response = await fetch('http://localhost:3000/createReport', {
@@ -570,7 +574,10 @@ const Overview = () => {
       if (!response.ok) {
         throw new Error('Failed to generate report');
       }
-
+  
+      const result = await response.json();
+      console.log('Report generation response:', result);
+  
       alert('Report generated successfully!');
     } catch (error) {
       console.error('Error generating report:', error);
@@ -600,11 +607,61 @@ const Overview = () => {
     }
   };
 
+  // const handleAiChat = async () => {
+  //   setIsLoading(true);
+  //   try {
+  //     const response = await fetch('http://localhost:3000/gemini-chat', {
+  //       method: 'POST',
+  //       headers: {
+  //         'Content-Type': 'application/json',
+  //       },
+  //       body: JSON.stringify({ message: aiMessage }),
+  //     });
+
+  //     if (!response.ok) {
+  //       const errorData = await response.json();
+  //       throw new Error(errorData.details || 'Failed to get response from Gemini');
+  //     }
+
+  //     const data = await response.json();
+  //     setAiResponse(data.pii);
+
+  //     try {
+  //       const cleanedPiiData = data.pii.replace(/```json\n|\n```/g, '');
+  //       const piiData = JSON.parse(cleanedPiiData);
+  //       const updatedKeyValuePairs = Object.entries(piiData).map(([key, value]) => ({
+  //         key,
+  //         value
+  //       }));
+  //       for (let i = 0; i < updatedKeyValuePairs.length; i++) {
+  //         updatedKeyValuePairs[i].value = "\\b" + updatedKeyValuePairs[i].value
+  //           .replace(/^\^|\$$/g, '')
+  //           .replace(/`/g, '')
+  //           + "\\b";
+  //       }
+  //       setKeyValuePairs(updatedKeyValuePairs);
+  //     } catch (parseError) {
+  //       console.error('Error parsing PII data:', parseError);
+  //       console.error('Raw PII data:', data.pii);  // Log the raw data for debugging
+  //       setAiResponse('Received response, but it was not in the expected format. Please try again or modify your input.');
+  //     }
+
+  //   } catch (error) {
+  //     console.error('Error in AI chat:', error);
+  //     setAiResponse(`Error: ${error.message}`);
+  //   } finally {
+  //     setIsLoading(false);
+  //   }
+  // };
+
+
+
   return (
     <>
       <div className="bg-[#121212] text-white min-h-screen p-8 w-full overflow-hidden ">
         <h1 className="text-lg text-[#a4ff9e]">Scanner</h1>
         <h1 className="text-4xl font-bold text-white mb-6">Overview</h1>
+        {/* buttons */}
         <div className="mb-8">
           <div className="flex space-x-4">
             <button
@@ -629,6 +686,7 @@ const Overview = () => {
         </div>
 
         <div className="flex mb-8">
+          {/* inputs */}
           <div className="bg-[#121212] rounded-lg w-[97%] p-6 mx-auto">
             <h2 className="text-xl mb-4 text-grey-300 ">Input Information</h2>
             <input
@@ -718,14 +776,14 @@ const Overview = () => {
                   className="bg-[#282828] text-white rounded-2xl py-3 px-4 w-full mb-2 focus:outline-none"
                 />
                 <div className="flex items-stretch space-x-4">
-                  <input
-                    type="text"
-                    placeholder="Describe your project for PII detection"
-                    value={aiMessage}
-                    onChange={handleAiMessageChange}
-                    className="bg-[#282828] text-white rounded-2xl py-3 px-3 w-full focus:outline-none"
-                  />
-                </div>
+                    <input
+                      type="text"
+                      placeholder="Describe your project for PII detection"
+                      value={aiMessage}
+                      onChange={handleAiMessageChange}
+                      className="bg-[#282828] text-white rounded-2xl py-3 px-3 w-full focus:outline-none"
+                    />
+                  </div>
                 {keyValuePairs.map((pair, index) => (
                   <div className="flex flex-col space-y-2 mb-4" key={index}>
                     <div className="flex space-x-2">
@@ -777,32 +835,12 @@ const Overview = () => {
               <div className="space-y-4">
                 <input
                   type="text"
-                  placeholder="Enter host"
-                  value={host}
-                  onChange={(e) => setHost(e.target.value)}
+                  placeholder="Enter index"
+                  value={indexing}
+                  onChange={(e) => setIndexing(e.target.value)}
                   className="bg-[#282828] text-white rounded-2xl py-3 px-4 w-full mb-2 focus:outline-none"
                 />
-                <input
-                  type="text"
-                  placeholder="Enter username"
-                  value={logusername}
-                  onChange={(e) => setUsername(e.target.value)}
-                  className="bg-[#282828] text-white rounded-2xl py-3 px-4 w-full mb-2 focus:outline-none"
-                />
-                <input
-                  type="text"
-                  placeholder="Enter private key path"
-                  value={privateKeyPath}
-                  onChange={(e) => setPrivateKeyPath(e.target.value)}
-                  className="bg-[#282828] text-white rounded-2xl py-3 px-4 w-full mb-2 focus:outline-none"
-                />
-                <input
-                  type="text"
-                  placeholder="Enter log file path"
-                  value={logFilePath}
-                  onChange={(e) => setLogFilePath(e.target.value)}
-                  className="bg-[#282828] text-white rounded-2xl py-3 px-4 w-full mb-2 focus:outline-none"
-                />
+                
                 <div className="flex items-stretch space-x-4">
                   <input
                     type="text"
@@ -861,134 +899,247 @@ const Overview = () => {
 
           </div>
         </div>
+        <div className="w-[95%] mx-auto" style={{ height: '500px' }}>
+      <Suspense fallback={<Loading />}>
+        {isLoading ? (
+          <Loading />
+        ) : (
+          <div className={`flex ${scanOption === 'dynamic' ? 'flex-col' : 'flex-col md:flex-row'} gap-8`}>
+            <div 
+              className={`bg-[#2C2D2F] rounded-lg p-6 ${
+                scanOption === 'dynamic' ? 'w-full' : 'w-full md:w-[65%]'
+              } scrollable scrollbar-thin flex flex-col`} 
+              style={{ minHeight: '500px' }}
+            >
+              <h2 className="text-xl mb-4 text-gray-300">
+                {scanOption === 'dynamic' ? 'Log Analysis Results' : 'Results'}
+              </h2>
+              {scanOption === 'dynamic' && (
+                <p className="mb-2">Total Lines Analyzed: {numFiles}</p>
+              )}
+              {scanOption !== 'dynamic' && (
+                <p className="mb-2">Number of Files with PIIs found - {numFiles}</p>
+              )}
+              <div className="flex-grow overflow-x-auto scrollbar-thin">
+                <table className="min-w-full bg-[#2C2D2F] border-collapse border-gray-600 shadow-md rounded-lg overflow-hidden">
+                  <thead className="bg-[#2C2D2F] text-gray-300">
+                    <tr>
+                      <th className="py-2 px-4 border-b border-gray-600 text-left w-3/4">
+                        {scanOption === 'dynamic' ? 'Log Entry' : 'File path'}
+                      </th>
+                      <th className="py-2 px-4 border-b border-gray-600 text-right w-1/4">
+                        {scanOption === 'dynamic' ? 'Vulnerabilities' : 'No. of PIIs found'}
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="text-gray-400">
+                    {Object.entries(results).map(([key, value]) => {
+                      let displayKey = key;
+                      let displayValue = value;
 
-        <div className="flex flex-col md:flex-row gap-8 w-[95%] mx-auto" style={{ height: '500px' }}>
-          <Suspense fallback={<Loading />}>
-            {isLoading ? (
-              <Loading />
-            ) : (
-              <>
-                <div className="bg-[#2C2D2F] rounded-lg p-6 w-[65%] scrollable scrollbar-thin flex flex-col" style={{ minHeight: '500px' }}>
-                  {/* <h2 className="text-xl mb-4 text-gray-300">Results</h2>
-            <p className="mb-2">Number of Files with PIIs found - {numFiles}</p> */}
-                  <h2 className="text-xl mb-4 text-gray-300">
-                    {scanOption === 'dynamic' ? 'Log Analysis Results' : 'Results'}
-                  </h2>
-                  <p className="mb-2">
-                    {scanOption === 'dynamic'
-                      ? `Total Lines Analyzed: ${numFiles}`
-                      : `Number of Files with PIIs found - ${numFiles}`}
-                  </p>
-                  <div className="flex-grow overflow-x-auto scrollbar-thin">
-                    <table className="min-w-full bg-[#2C2D2F] border-collapse border-gray-600 shadow-md rounded-lg overflow-hidden">
-                      <thead className="bg-[#2C2D2F] text-gray-300">
-                        <tr>
-                          <th className="py-2 px-4 border-b border-gray-600 text-left w-3/4">File path</th>
-                          <th className="py-2 px-4 border-b border-gray-600 text-right w-1/4">No. of PIIs found</th>
+                      if (scanOption === 'dynamic') {
+                        // For dynamic scans, key is the log entry and value is the vulnerability count
+                        displayValue = value;
+                      } else {
+                        // For other scan types, calculate PII count
+                        displayValue = typeof value === 'number' ? value :
+                          (Array.isArray(value) ? value.length :
+                            (typeof value === 'object' ? Object.values(value).flat().length : 0));
+                      }
+
+                      return (
+                        <tr key={key}>
+                          <td className="py-2 px-4 border-b border-gray-600 text-left">{displayKey}</td>
+                          <td className="py-2 px-4 border-b border-gray-600 text-right">{displayValue}</td>
                         </tr>
-                      </thead>
-                      <tbody className="text-gray-400">
-                        {Object.entries(results).map(([filePath, piiData]) => {
-                          let piiCount;
-                          if (scanOption === 'dynamic') {
-                            // For dynamic scans, piiData is the direct count of vulnerabilities
-                            piiCount = piiData;
-                          } else {
-                            // For other scan types, keep the existing logic
-                            piiCount = typeof piiData === 'number' ? piiData :
-                              (Array.isArray(piiData) ? piiData.length :
-                                (typeof piiData === 'object' ? Object.values(piiData).flat().length : 0));
-                          }
-
-                          return (
-                            <tr key={filePath}>
-                              <td className="py-2 px-4 border-b border-gray-600 text-left">{filePath}</td>
-                              <td className="py-2 px-4 border-b border-gray-600 text-right">{piiCount}</td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-                  <div className="mt-4 flex justify-end">
-                    <button
-                      className="bg-[#a4ff9e] hover:bg-black hover:text-[#a4ff9e] hover:font-bold font-bold text-[#000000] py-2 px-4 rounded transition duration-300"
-                      onClick={handleGenerateReport}
-                    >
-                      Generate Report
-                    </button>
-                  </div>
-                </div>
-                <div className="bg-[#2C2D2F] rounded-lg p-6 w-[35%] scrollable scrollbar-thin flex flex-col" style={{ minHeight: '500px' }}>
-                  {/* <h2 className="text-xl mb-4 text-gray-300">Repository Info</h2> */}
-                  <h2 className="text-xl mb-4 text-gray-300">
-                    {scanOption === 'dynamic' ? 'Log Statistics' : 'Repository Info'}
-                  </h2>
-                  <div className="flex flex-grow flex-col">
-                    {Object.values(repoInfo).some(value => value !== 0) ? (
-                      <>
-                        <div className="mb-4 max-h-64 overflow-y-auto scrollbar-thin">
-                          <div className="grid grid-cols-5 gap-2 ">
-                            {Object.entries(repoInfo)
-                              .sort(([, a], [, b]) => b - a)
-                              .map(([lang, value]) => (
-                                <p key={lang} className="mb-2 text-sm">
-                                  {lang}: {typeof value === 'number' ? `${value.toFixed(2)}%` : value}
-                                </p>
-                              ))}
-                          </div>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+              <div className="mt-4 flex justify-end">
+                <button
+                  className="bg-[#a4ff9e] hover:bg-black hover:text-[#a4ff9e] hover:font-bold font-bold text-[#000000] py-2 px-4 rounded transition duration-300"
+                  onClick={handleGenerateReport}
+                >
+                  Generate Report
+                </button>
+              </div>
+            </div>
+            {scanOption !== 'dynamic' && (
+              <div className="bg-[#2C2D2F] rounded-lg p-6 w-full md:w-[35%] scrollable scrollbar-thin flex flex-col" style={{ minHeight: '500px' }}>
+                <h2 className="text-xl mb-4 text-gray-300">Repository Info</h2>
+                <div className="flex flex-grow flex-col">
+                  {Object.values(repoInfo).some(value => value !== 0) ? (
+                    <>
+                      <div className="mb-4 max-h-64 overflow-y-auto scrollbar-thin">
+                        <div className="grid grid-cols-5 gap-2 ">
+                          {Object.entries(repoInfo)
+                            .sort(([, a], [, b]) => b - a)
+                            .map(([lang, value]) => (
+                              <p key={lang} className="mb-2 text-sm">
+                                {lang}: {typeof value === 'number' ? `${value.toFixed(2)}%` : value}
+                              </p>
+                            ))}
                         </div>
-                        <div style={{ width: '100%', height: '300px', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-                          <div style={{ width: '100%', maxWidth: '300px', height: '300px' }}>
-                            <Pie data={chartData} options={{
-                              responsive: true,
-                              maintainAspectRatio: false,
-                              plugins: {
-                                legend: {
-                                  position: 'bottom',
-                                  labels: {
-                                    boxWidth: 12,
-                                    font: {
-                                      size: 15,
-                                    },
-                                    padding: 10,
-                                  }
-                                },
-                                tooltip: {
-                                  callbacks: {
-                                    label: function (context) {
-                                      let label = context.label || '';
-                                      if (label) {
-                                        label += ': ';
-                                      }
-                                      if (context.parsed !== undefined) {
-                                        label += context.parsed;
-                                        if (scanOption === 'dynamic') {
-                                          const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                                          const percentage = ((context.parsed / total) * 100).toFixed(2);
-                                          label += ` (${percentage}%)`;
-                                        } else {
-                                          label += '%';
-                                        }
-                                      }
-                                      return label;
+                      </div>
+                      <div style={{ width: '100%', height: '300px', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                        <div style={{ width: '100%', maxWidth: '300px', height: '300px' }}>
+                          <Pie data={chartData} options={{
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                              legend: {
+                                position: 'bottom',
+                                labels: {
+                                  boxWidth: 12,
+                                  font: {
+                                    size: 15,
+                                  },
+                                  padding: 10,
+                                }
+                              },
+                              tooltip: {
+                                callbacks: {
+                                  label: function (context) {
+                                    let label = context.label || '';
+                                    if (label) {
+                                      label += ': ';
                                     }
+                                    if (context.parsed !== undefined) {
+                                      label += `${context.parsed}%`;
+                                    }
+                                    return label;
                                   }
                                 }
                               }
-                            }} />
-                          </div>
+                            }
+                          }} />
                         </div>
-                      </>
-                    ) : (
-                      <p className="text-gray-400 text-center">Perform scan</p>
-                    )}
-                  </div>
+                      </div>
+                    </>
+                  ) : (
+                    <p className="text-gray-400 text-center">Perform scan</p>
+                  )}
                 </div>
-              </>
+              </div>
             )}
-          </Suspense>
-        </div>
+          </div>
+        )}
+      </Suspense>
+    </div>
+
+        {/* <div className="w-[95%] mx-auto" style={{ height: '500px' }}>
+      <Suspense fallback={<Loading />}>
+        {isLoading ? (
+          <Loading />
+        ) : (
+          <div className={`flex ${scanOption === 'dynamic' ? 'flex-col' : 'flex-col md:flex-row'} gap-8`}>
+            <div 
+              className={`bg-[#2C2D2F] rounded-lg p-6 ${
+                scanOption === 'dynamic' ? 'w-full' : 'w-full md:w-[65%]'
+              } scrollable scrollbar-thin flex flex-col`} 
+              style={{ minHeight: '500px' }}
+            >
+              <h2 className="text-xl mb-4 text-gray-300">
+                {scanOption === 'dynamic' ? 'Log Analysis Results' : 'Results'}
+              </h2>
+              <div className="flex-grow overflow-x-auto scrollbar-thin">
+                <table className="min-w-full bg-[#2C2D2F] border-collapse border-gray-600 shadow-md rounded-lg overflow-hidden">
+                  <thead className="bg-[#2C2D2F] text-gray-300">
+                    <tr>
+                      <th className="py-2 px-4 border-b border-gray-600 text-left w-3/4">File path</th>
+                      <th className="py-2 px-4 border-b border-gray-600 text-right w-1/4">No. of PIIs found</th>
+                    </tr>
+                  </thead>
+                  <tbody className="text-gray-400">
+                    {Object.entries(results).map(([filePath, piiData]) => {
+                      let piiCount = scanOption === 'dynamic' ? piiData :
+                        (typeof piiData === 'number' ? piiData :
+                          (Array.isArray(piiData) ? piiData.length :
+                            (typeof piiData === 'object' ? Object.values(piiData).flat().length : 0)));
+
+                      return (
+                        <tr key={filePath}>
+                          <td className="py-2 px-4 border-b border-gray-600 text-left">{filePath}</td>
+                          <td className="py-2 px-4 border-b border-gray-600 text-right">{piiCount}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+              <div className="mt-4 flex justify-end">
+                <button
+                  className="bg-[#a4ff9e] hover:bg-black hover:text-[#a4ff9e] hover:font-bold font-bold text-[#000000] py-2 px-4 rounded transition duration-300"
+                  onClick={handleGenerateReport}
+                >
+                  Generate Report
+                </button>
+              </div>
+            </div>
+            {scanOption !== 'dynamic' && (
+              <div className="bg-[#2C2D2F] rounded-lg p-6 w-full md:w-[35%] scrollable scrollbar-thin flex flex-col" style={{ minHeight: '500px' }}>
+                <h2 className="text-xl mb-4 text-gray-300">Repository Info</h2>
+                <div className="flex flex-grow flex-col">
+                  {Object.values(repoInfo).some(value => value !== 0) ? (
+                    <>
+                      <div className="mb-4 max-h-64 overflow-y-auto scrollbar-thin">
+                        <div className="grid grid-cols-5 gap-2 ">
+                          {Object.entries(repoInfo)
+                            .sort(([, a], [, b]) => b - a)
+                            .map(([lang, value]) => (
+                              <p key={lang} className="mb-2 text-sm">
+                                {lang}: {typeof value === 'number' ? `${value.toFixed(2)}%` : value}
+                              </p>
+                            ))}
+                        </div>
+                      </div>
+                      <div style={{ width: '100%', height: '300px', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                        <div style={{ width: '100%', maxWidth: '300px', height: '300px' }}>
+                          <Pie data={chartData} options={{
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                              legend: {
+                                position: 'bottom',
+                                labels: {
+                                  boxWidth: 12,
+                                  font: {
+                                    size: 15,
+                                  },
+                                  padding: 10,
+                                }
+                              },
+                              tooltip: {
+                                callbacks: {
+                                  label: function (context) {
+                                    let label = context.label || '';
+                                    if (label) {
+                                      label += ': ';
+                                    }
+                                    if (context.parsed !== undefined) {
+                                      label += `${context.parsed}%`;
+                                    }
+                                    return label;
+                                  }
+                                }
+                              }
+                            }
+                          }} />
+                        </div>
+                      </div>
+                    </>
+                  ) : (
+                    <p className="text-gray-400 text-center">Perform scan</p>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </Suspense>
+    </div> */}
       </div>
     </>
 

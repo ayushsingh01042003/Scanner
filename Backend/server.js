@@ -1,6 +1,8 @@
 import express from 'express';
 import { scanGitHubRepository } from './scanners/github-scanner.js';
+
 import scanDirectory from './scanners/file-scanner.js';
+
 import scanFiles from './scanners/pii-localScanner.js';
 import { analyzeLocalDirectory, analyzeGitHubRepository } from './utils/language-analyzer.js';
 import { Octokit } from 'octokit';
@@ -23,9 +25,8 @@ import { scanFileContent } from './scanners/pii-scanner.js';
 import fetchRemoteLogFile from './utils/fetchRemoteLogFile.js';
 import https from 'https';
 import axios from 'axios';
-import querystring from 'querystring';  
+import querystring from 'querystring';
 import autoPopulateS from './utils/autoPopulateS.js';
-
 
 dotenv.config();
 const app = express();
@@ -464,27 +465,22 @@ app.delete('/deleteScan/:scanId', async (req, res) => {
   }
 })
 
-app.post("/regexValue", async (req, res) => {
+app.post("/regexValue-splunk", async (req, res) => {
   const { data } = req.body;
-  
+
   try {
-    const response = await autoPopulate(data);  
+    const response = await autoPopulateS(data);
     return res.json(response);
   } catch (error) {
     return res.status(500).json({ error: 'Error generating regex', details: error.message });
   }
 });
 
-app.post("/regexValue-splunk", async (req, res) => {
+app.post("/regexValue", async (req, res) => {
   const { data } = req.body;
-  
-  try {
-    const response = await autoPopulateS(data);  
-    return res.json(response);
-  } catch (error) {
-    return res.status(500).json({ error: 'Error generating regex', details: error.message });
-  }
-});
+  const response = await autoPopulate(data)
+  return res.json(response)
+})
 
 // Mistral API integration for regex generation based on project genre for normal
 app.post('/mistral-chat', async (req, res) => {
@@ -607,6 +603,7 @@ app.post('/mistral-chat', async (req, res) => {
     }
 
     const generatedText = result.data.choices[0].message.content;
+    console.log('Generated Text:', generatedText);
     
     // Extract JSON object from the response
     const jsonMatch = generatedText.match(/\{[\s\S]*\}/);
@@ -615,6 +612,7 @@ app.post('/mistral-chat', async (req, res) => {
     }
 
     const jsonString = jsonMatch[0];
+    console.log('Extracted JSON String:', jsonString);
     
     // Use custom parsing function
     const generatedRegex = customJSONParse(jsonString);
@@ -630,6 +628,7 @@ app.post('/mistral-chat', async (req, res) => {
       })
     );
     
+    console.log('Formatted Regex:', formattedRegex);
     return res.json({ pii: formattedRegex });
   } catch (error) {
     console.error('Error in Mistral API:', error);
@@ -639,7 +638,6 @@ app.post('/mistral-chat', async (req, res) => {
     });
   }
 });
-
 // Mistral API integration for regex generation based on project genre for splunk
 app.post('/mistral-chat-splunk', async (req, res) => {
   const { message } = req.body;
@@ -761,6 +759,7 @@ app.post('/mistral-chat-splunk', async (req, res) => {
     }
 
     const generatedText = result.data.choices[0].message.content;
+    console.log('Generated Text:', generatedText);
     
     // Extract JSON object from the response
     const jsonMatch = generatedText.match(/\{[\s\S]*\}/);
@@ -769,6 +768,7 @@ app.post('/mistral-chat-splunk', async (req, res) => {
     }
 
     const jsonString = jsonMatch[0];
+    console.log('Extracted JSON String:', jsonString);
     
     // Use custom parsing function
     const generatedRegex = customJSONParse(jsonString);
@@ -784,6 +784,7 @@ app.post('/mistral-chat-splunk', async (req, res) => {
       })
     );
     
+    console.log('Formatted Regex:', formattedRegex);
     return res.json({ pii: formattedRegex });
   } catch (error) {
     console.error('Error in Mistral API:', error);
@@ -793,7 +794,6 @@ app.post('/mistral-chat-splunk', async (req, res) => {
     });
   }
 });
-
 
 app.use('/api/auth', authRoutes);
 
@@ -819,50 +819,47 @@ const axiosInstance = axios.create({
 
 app.post('/splunk-search', async (req, res) => {
   const { index, fieldRegexPairs } = req.body;
-  
-  // Construct the search query
   let searchQuery = `search index=${index || '*'}`;
-  
   for (const [field, regex] of Object.entries(fieldRegexPairs)) {
-    // Use Splunk's search command syntax for regex extraction
     searchQuery += ` | rex field=_raw "(?<${field}>${regex})"`;
   }
-  
-  searchQuery += ' | table ' + Object.keys(fieldRegexPairs).join(', '); // To display the extracted fields
-  
+  searchQuery += ' | table source, ' + Object.keys(fieldRegexPairs).join(', ');
+
   try {
-    // Create a search query
     const params = querystring.stringify({
       search: searchQuery,
       output_mode: 'json',
-      exec_mode: 'oneshot'  // This will make Splunk wait for the search to complete before responding
+      exec_mode: 'oneshot'
     });
-
     const createJobResponse = await axiosInstance.post(splunkSearchUrl, params, {
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded'
       }
     });
 
-    // The results are directly in the response
-    res.json(createJobResponse.data);
+    const processedResults = createJobResponse.data.results
+      .map(result => {
+        const processedResult = { ...result };
+        if (result.source) {
+          processedResult.filePath = result.source;
+          delete processedResult.source;
+        }
+        return processedResult;
+      })
+      .filter(result => {
+        const keys = Object.keys(result);
+        return keys.length > 1 || (keys.length === 1 && keys[0] !== 'filePath');
+      });
 
+    res.json({
+      ...createJobResponse.data,
+      results: processedResults
+    });
   } catch (error) {
     console.error('Error:', error.response ? error.response.data : error.message);
     res.status(500).json({ error: 'An error occurred while querying Splunk', details: error.response ? error.response.data : error.message });
   }
 });
-
-
-function analyzeLogContent(logContent) {
-  const stats = {
-    totalLines: 0,
-  };
-
-  const lines = logContent.split('\n');
-  stats.totalLines = lines.length;
-  return stats;
-}
 
 app.listen(port, () => {
   connectToMongoDB();
