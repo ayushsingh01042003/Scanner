@@ -1,8 +1,6 @@
 import express from 'express';
 import { scanGitHubRepository } from './scanners/github-scanner.js';
-
 import scanDirectory from './scanners/file-scanner.js';
-
 import scanFiles from './scanners/pii-localScanner.js';
 import { analyzeLocalDirectory, analyzeGitHubRepository } from './utils/language-analyzer.js';
 import { Octokit } from 'octokit';
@@ -27,6 +25,10 @@ import https from 'https';
 import axios from 'axios';
 import querystring from 'querystring';
 import autoPopulateS from './utils/autoPopulateS.js';
+import Admin from './models/admin.model.js';
+import Team from './models/team.model.js';
+import checkUserRole from './middlewares/checkUserRole.js'
+import verifyToken from './middlewares/verifyToken.js';
 
 dotenv.config();
 const app = express();
@@ -48,57 +50,406 @@ const splunkPassword = process.env.SPLUNK_PASSWORD;
 
 const octokit = new Octokit({ auth: process.env.GITHUB_TOKEN });
 
-app.post('/signup', async (req, res) => {
-  const { username, password, confirmPassword } = req.body;
+app.get('/admin/all-reports', verifyToken, checkUserRole, async (req, res) => {
+  if (req.userRole !== 'admin') {
+    return res.status(403).json({ message: 'Admin access required' });
+  }
+
+  try {
+    const projects = await Project.find()
+      .populate({
+        path: 'scans',
+        options: { sort: { timestamp: -1 } },
+        populate: {
+          path: 'project',
+          select: 'projectName'
+        }
+      })
+      .sort({ lastScanAt: -1 });
+
+    res.json(projects);
+  } catch (error) {
+    logger.error('Error fetching all reports for admin', { error: error.message });
+    res.status(500).json({ message: error.message });
+  }
+});
+
+app.get('/admin/statistics', verifyToken, checkUserRole, async (req, res) => {
+  if (req.userRole !== 'admin') {
+    return res.status(403).json({ message: 'Admin access required' });
+  }
+
+  try {
+    const totalProjects = await Project.countDocuments();
+    const totalScans = await ScanReport.countDocuments();
+    const scansByType = await ScanReport.aggregate([
+      { $group: { _id: '$scanType', count: { $sum: 1 } } }
+    ]);
+    const recentScans = await ScanReport.find()
+      .sort({ timestamp: -1 })
+      .limit(5)
+      .populate('project', 'projectName');
+
+    res.json({
+      totalProjects,
+      totalScans,
+      scansByType,
+      recentScans
+    });
+  } catch (error) {
+    logger.error('Error fetching admin statistics', { error: error.message });
+    res.status(500).json({ message: error.message });
+  }
+});
+
+app.get('/team/projects', verifyToken, checkUserRole, async (req, res) => {
+  if (req.userRole !== 'team') {
+    return res.status(403).json({ message: 'Team access required' });
+  }
+
+  try {
+    const teamMembers = await User.find({ team: req.teamName });
+    const teamUsernames = teamMembers.map(member => member.username);
+
+    const teamScans = await ScanReport.find({
+      username: { $in: teamUsernames }
+    }).distinct('project');
+
+    const projects = await Project.find({
+      _id: { $in: teamScans }
+    }).populate({
+      path: 'scans',
+      match: { username: { $in: teamUsernames } },
+      options: { sort: { timestamp: -1 } }
+    }).sort({ lastScanAt: -1 });
+
+    res.json(projects);
+  } catch (error) {
+    logger.error('Error fetching team projects', { error: error.message });
+    res.status(500).json({ message: error.message });
+  }
+});
+
+app.get('/team/statistics', verifyToken, checkUserRole, async (req, res) => {
+  if (req.userRole !== 'team') {
+    return res.status(403).json({ message: 'Team access required' });
+  }
+
+  try {
+    const teamMembers = await User.find({ team: req.teamName });
+    const teamUsernames = teamMembers.map(member => member.username);
+
+    const totalScans = await ScanReport.countDocuments({
+      username: { $in: teamUsernames }
+    });
+
+    const scansByMember = await ScanReport.aggregate([
+      { $match: { username: { $in: teamUsernames } } },
+      { $group: { _id: '$username', count: { $sum: 1 } } }
+    ]);
+
+    const scansByType = await ScanReport.aggregate([
+      { $match: { username: { $in: teamUsernames } } },
+      { $group: { _id: '$scanType', count: { $sum: 1 } } }
+    ]);
+
+    res.json({
+      totalTeamMembers: teamMembers.length,
+      totalScans,
+      scansByMember,
+      scansByType
+    });
+  } catch (error) {
+    logger.error('Error fetching team statistics', { error: error.message });
+    res.status(500).json({ message: error.message });
+  }
+});
+
+app.get('/user/projects', verifyToken,checkUserRole, async (req, res) => {
+  if (req.userRole !== 'user') {
+    return res.status(403).json({ message: 'Invalid access' });
+  }
+
+  try {
+    const userScans = await ScanReport.find({
+      username: req.user
+    }).distinct('project');
+
+    const projects = await Project.find({
+      _id: { $in: userScans }
+    }).populate({
+      path: 'scans',
+      match: { username: req.user },
+      options: { sort: { timestamp: -1 } }
+    }).sort({ lastScanAt: -1 });
+
+    res.json(projects);
+  } catch (error) {
+    logger.error('Error fetching user projects', { error: error.message });
+    res.status(500).json({ message: error.message });
+  }
+});
+
+app.get('/user/statistics', verifyToken, checkUserRole, async (req, res) => {
+  if (req.userRole !== 'user') {
+    return res.status(403).json({ message: 'Invalid access' });
+  }
+
+  try {
+    const totalScans = await ScanReport.countDocuments({
+      username: req.user
+    });
+
+    const scansByType = await ScanReport.aggregate([
+      { $match: { username: req.user } },
+      { $group: { _id: '$scanType', count: { $sum: 1 } } }
+    ]);
+
+    const recentScans = await ScanReport.find({
+      username: req.user
+    })
+      .sort({ timestamp: -1 })
+      .limit(5)
+      .populate('project', 'projectName');
+
+    res.json({
+      totalScans,
+      scansByType,
+      recentScans
+    });
+  } catch (error) {
+    logger.error('Error fetching user statistics', { error: error.message });
+    res.status(500).json({ message: error.message });
+  }
+});
+
+app.get('/reports/:reportId', verifyToken, checkUserRole, async (req, res) => {
+  try {
+    const report = await ScanReport.findById(req.params.reportId)
+      .populate('project', 'projectName');
+
+    if (!report) {
+      return res.status(404).json({ message: 'Report not found' });
+    }
+
+    // Check authorization
+    if (req.userRole === 'admin') {
+      // Admin can access all reports
+      return res.json(report);
+    } else if (req.userRole === 'team') {
+      // Team can access reports from team members
+      const teamMembers = await User.find({ team: req.teamName });
+      const teamUsernames = teamMembers.map(member => member.username);
+      if (!teamUsernames.includes(report.username)) {
+        return res.status(403).json({ message: 'Access denied' });
+      }
+    } else if (req.userRole === 'user') {
+      // User can only access their own reports
+      if (report.username !== req.user) {
+        return res.status(403).json({ message: 'Access denied' });
+      }
+    }
+
+    res.json(report);
+  } catch (error) {
+    logger.error('Error fetching report', { error: error.message });
+    res.status(500).json({ message: error.message });
+  }
+});
+
+app.post('/user/signup', async (req, res) => {
+  const { username, password, confirmPassword, team } = req.body;
 
   if (password !== confirmPassword) {
     return res.status(400).send({ msg: "The passwords do not match" });
   }
 
-  const userExists = await User.findOne({ username });
-  if (userExists) {
-    return res.status(400).send({ msg: "User already exists" });
-  }
-
   try {
+    const userExists = await User.findOne({ username });
+    if (userExists) {
+      return res.status(400).send({ msg: "User already exists" });
+    }
+
+    // Check if team exists, if not create it
+    let existingTeam = await Team.findOne({ teamName: team });
+    if (!existingTeam) {
+      // Generate a random password for the team
+      const teamPassword = Math.random().toString(36).slice(-8);
+      const salt = await bcrypt.genSalt(10);
+      const hashedTeamPassword = await bcrypt.hash(teamPassword, salt);
+
+      existingTeam = new Team({
+        teamName: team,
+        password: hashedTeamPassword,
+        teamMembers: []
+      });
+      await existingTeam.save();
+      logger.info('Team created automatically', { teamName: team, teamPassword });
+    }
+
+    // Create user
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
-    const newUser = new User({ username, password: hashedPassword });
+    const newUser = new User({ 
+      username, 
+      password: hashedPassword,
+      team 
+    });
 
-    if (newUser) {
-      await newUser.save();
-      logger.info('User created successfully', { username });
-      return res.status(200).send({ msg: `User ${newUser.username} has been created` });
-    } else {
-      logger.error('Error during user creation', { username, error: err.message });
-      return res.status(400).send({ msg: "Invalid user data" });
-    }
+    const savedUser = await newUser.save();
+
+    // Add user to team's members list
+    await Team.findOneAndUpdate(
+      { teamName: team },
+      { $addToSet: { teamMembers: savedUser._id } }  // Using addToSet instead of push to avoid duplicates
+    );
+
+    // If we created a new team, include the team password in the response
+    const responseMsg = existingTeam ? 
+      `User ${username} has been created and added to team ${team}` :
+      `User ${username} has been created and added to new team ${team}. Team password: ${teamPassword}`;
+
+    logger.info('User created successfully', { username, team });
+    return res.status(200).send({ 
+      msg: responseMsg,
+      teamCreated: !existingTeam
+    });
   } catch (err) {
-    res.status(500).send({ msg: "An error occurred", error: err.message });
+    logger.error('Error during user creation', { username, team, error: err.message });
+    return res.status(500).send({ msg: "An error occurred", error: err.message });
   }
 });
 
-app.post('/login', async (req, res) => {
+app.post('/user/login', async (req, res) => {
   const { username, password } = req.body;
 
   try {
     const user = await User.findOne({ username });
-
     if (!user) {
       return res.status(400).send({ msg: "User does not exist" });
     }
 
     const isMatch = await bcrypt.compare(password, user.password);
-
     if (!isMatch) {
       return res.status(400).send({ msg: "Invalid Credentials" });
     }
 
     generateTokenAndSetCookie(username, res);
-    return res.status(200).send({ msg: `User ${username} logged in` });
+    return res.status(200).send({ 
+      msg: `User ${username} logged in`,
+      team: user.team 
+    });
   } catch (err) {
     logger.error('Error during login', { username, error: err.message });
+    return res.status(500).send({ msg: "Internal Server Error", error: err.message });
+  }
+});
+
+app.post('/team/signup', async (req, res) => {
+  const { teamName, password, confirmPassword } = req.body;
+
+  if (password !== confirmPassword) {
+    return res.status(400).send({ msg: "The passwords do not match" });
+  }
+
+  try {
+    const teamExists = await Team.findOne({ teamName });
+    if (teamExists) {
+      return res.status(400).send({ msg: "Team already exists" });
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
+
+    const newTeam = new Team({
+      teamName,
+      password: hashedPassword,
+      teamMembers: []
+    });
+
+    await newTeam.save();
+    logger.info('Team created successfully', { teamName });
+    return res.status(200).send({ msg: `Team ${teamName} has been created` });
+  } catch (err) {
+    logger.error('Error during team creation', { teamName, error: err.message });
+    return res.status(500).send({ msg: "An error occurred", error: err.message });
+  }
+});
+
+app.post('/team/login', async (req, res) => {
+  const { teamName, password } = req.body;
+
+  try {
+    const team = await Team.findOne({ teamName }).populate('teamMembers', 'username');
+    if (!team) {
+      return res.status(400).send({ msg: "Team does not exist" });
+    }
+
+    const isMatch = await bcrypt.compare(password, team.password);
+    if (!isMatch) {
+      return res.status(400).send({ msg: "Invalid Credentials" });
+    }
+
+    generateTokenAndSetCookie(teamName, res);
+    return res.status(200).send({ 
+      msg: `Team ${teamName} logged in`,
+      teamMembers: team.teamMembers 
+    });
+  } catch (err) {
+    logger.error('Error during team login', { teamName, error: err.message });
+    return res.status(500).send({ msg: "Internal Server Error", error: err.message });
+  }
+});
+
+app.post('/admin/signup', async (req, res) => {
+  const { adminName, adminPassword, confirmPassword } = req.body;
+
+  if (adminPassword !== confirmPassword) {
+    return res.status(400).send({ msg: "The passwords do not match" });
+  }
+
+  try {
+    const adminExists = await Admin.findOne({ adminName });
+    if (adminExists) {
+      return res.status(400).send({ msg: "Admin already exists" });
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(adminPassword, salt);
+
+    const newAdmin = new Admin({
+      adminName,
+      adminPassword: hashedPassword
+    });
+
+    await newAdmin.save();
+    logger.info('Admin created successfully', { adminName });
+    return res.status(200).send({ msg: `Admin ${adminName} has been created` });
+  } catch (err) {
+    logger.error('Error during admin creation', { adminName, error: err.message });
+    return res.status(500).send({ msg: "An error occurred", error: err.message });
+  }
+});
+
+app.post('/admin/login', async (req, res) => {
+  const { adminName, adminPassword } = req.body;
+
+  try {
+    const admin = await Admin.findOne({ adminName });
+    if (!admin) {
+      return res.status(400).send({ msg: "Admin does not exist" });
+    }
+
+    const isMatch = await bcrypt.compare(adminPassword, admin.adminPassword);
+    if (!isMatch) {
+      return res.status(400).send({ msg: "Invalid Credentials" });
+    }
+
+    generateTokenAndSetCookie(adminName, res);
+    return res.status(200).send({ msg: `Admin ${adminName} logged in` });
+  } catch (err) {
+    logger.error('Error during admin login', { adminName, error: err.message });
     return res.status(500).send({ msg: "Internal Server Error", error: err.message });
   }
 });
@@ -482,7 +833,6 @@ app.post("/regexValue", async (req, res) => {
   return res.json(response)
 })
 
-// Mistral API integration for regex generation based on project genre for normal
 app.post('/mistral-chat', async (req, res) => {
   const { message } = req.body;
 
@@ -638,7 +988,7 @@ app.post('/mistral-chat', async (req, res) => {
     });
   }
 });
-// Mistral API integration for regex generation based on project genre for splunk
+
 app.post('/mistral-chat-splunk', async (req, res) => {
   const { message } = req.body;
 
@@ -803,7 +1153,6 @@ app.get('/google-client-id', (req, res) => {
 
 const splunkSearchUrl = `https://${splunkHost}:${splunkPort}/services/search/jobs`;
 
-// Create a custom HTTPS agent that doesn't verify SSL certificates
 const agent = new https.Agent({
   rejectUnauthorized: false
 });

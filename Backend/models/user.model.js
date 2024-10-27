@@ -9,6 +9,10 @@ const userSchema = mongoose.Schema({
     password: {
         type: String,
         require: true
+    },
+    team: {
+        type: String,
+        require: true
     }
 })
 
