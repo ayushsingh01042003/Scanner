@@ -20,6 +20,8 @@ const Login = ({ setActiveComponent, onLogin }) => {
   const { setIsAuthenticated , setUsername: Setgoogleusername } = useContext(AuthContext);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [teamname, setTeamname] = useState('');
+  const [level, setLevel] = useState(''); 
   const [error, setError] = useState('');
   const navigate = useNavigate();
 
@@ -91,15 +93,32 @@ const Login = ({ setActiveComponent, onLogin }) => {
                 onChange={(e) => setPassword(e.target.value)}
                 required
               />
+              
+              <select value={level} onChange={(e) => setLevel(e.target.value)} required>
+                <option value="" disabled>Select the level</option>
+                <option value="Enterprise">Enterprise</option>
+                <option value="Portfolio">Portfolio</option>
+                <option value="Account">Account</option>
+              </select>
+
+              {level === 'Account' && (
+                <Input
+                  type="text"
+                  placeholder="team name"
+                  value={teamname}
+                  onChange={(e) => setTeamname(e.target.value)}
+                />
+              )}
+
               <Button type="submit">Login</Button>
             </center>
           </form>
-          <center>{error && <p className="mt-4" style={{color:'red'}}>{error}</p>}
+          {/* <center>{error && <p className="mt-4" style={{color:'red'}}>{error}</p>}
           <p className='p-8'>Don't have an account?<a href="#" style={{color: '#3498db'}} onClick={() => setActiveComponent('signup')}> Sign up</a></p>
           <GoogleLogin 
               onSuccess={handleSuccess}
               onError={handleError}
-            /></center>
+            /></center> */}
         </LeftSection>
         <RightSection>
           <AppPreview src={myImage} alt="App Preview" />
