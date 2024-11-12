@@ -1,9 +1,10 @@
 import mongoose from "mongoose";
 
 const ScanReportSchema = new mongoose.Schema({
-  username: {
-    type: String,
-    required: true,
+  user: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Account',
+    required: true
   },
   project: {
     type: mongoose.Schema.Types.ObjectId,
@@ -27,5 +28,4 @@ const ScanReportSchema = new mongoose.Schema({
 });
 
 const ScanReport = mongoose.model("ScanReport", ScanReportSchema);
-
 export default ScanReport;
