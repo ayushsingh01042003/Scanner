@@ -16,7 +16,6 @@ import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs'
 import cookieParser from 'cookie-parser';
 import logger from './utils/logger.js';
-import authRoutes from './routes/auth.js';
 import { scanFileContent } from './scanners/pii-scanner.js';
 import fetchRemoteLogFile from './utils/fetchRemoteLogFile.js';
 import https from 'https';
@@ -26,20 +25,15 @@ import autoPopulateS from './utils/autoPopulateS.js';
 import verifyToken from './middlewares/verifyToken.js';
 import Account from './models/account.model.js';
 import getAccountDetails from './middlewares/getAccountDetails.js'
+import jwt from 'jsonwebtoken';
 
 dotenv.config();
 const app = express();
 const port = 3000;
 
-app.use(express.json());
+app.use(express.json())
 app.use(cookieParser())
-app.use(cors({
-  origin: function (origin, callback) {
-    callback(null, true);
-  },
-  credentials: true
-}));
-
+app.use(cors());
 const splunkHost = process.env.SPLUNK_HOST;
 const splunkPort = process.env.SPLUNK_PORT;
 const splunkUsername = process.env.SPLUNK_USERNAME;
@@ -1000,8 +994,6 @@ app.post('/mistral-chat-splunk', async (req, res) => {
     });
   }
 });
-
-app.use('/api/auth', authRoutes);
 
 app.get('/google-client-id', (req, res) => {
   res.json({ clientId: process.env.GOOGLE_CLIENT_ID });
