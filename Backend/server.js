@@ -33,7 +33,10 @@ const port = 3000;
 
 app.use(express.json())
 app.use(cookieParser())
-app.use(cors());
+app.use(cors({
+  origin : ['http://localhost:5173']
+}));
+
 const splunkHost = process.env.SPLUNK_HOST;
 const splunkPort = process.env.SPLUNK_PORT;
 const splunkUsername = process.env.SPLUNK_USERNAME;
