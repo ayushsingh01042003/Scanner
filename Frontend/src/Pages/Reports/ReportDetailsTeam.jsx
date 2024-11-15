@@ -54,9 +54,10 @@ const ReportDetailsTeam = () => {
       if (selectedMember === 'all') {
         response = await api.get('/getAllScans');
       } else {
+        console.log(selectedMember);
         response = await api.get(`/getUserScans/${selectedMember}`);
       }
-      
+      console.log(response.data);
       setScans(response.data);
       setSelectedScanId(null);
       setScanDetails(null);

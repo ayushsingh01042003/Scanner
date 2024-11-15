@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { MdPersonAdd } from 'react-icons/md';
 import axios from 'axios';
 
@@ -17,6 +17,10 @@ const AddTeamMember = () => {
     }
   });
 
+  useEffect(() => {
+    fetchTeamMembers();
+  }, []);
+
   const handleAddMember = async () => {
     if (!memberUsername.trim()) return;
 
@@ -29,13 +33,10 @@ const AddTeamMember = () => {
         memberUsername: memberUsername.trim()
       });
 
+      // Update the local teamMembers state
       setTeamMembers([...teamMembers, memberUsername.trim()]);
       setMemberUsername('');
       setSuccessMessage('Member added successfully!');
-      
-      // Fetch updated team members list
-      await fetchTeamMembers();
-
     } catch (err) {
       setError(err.response?.data?.msg || 'Failed to add team member');
     } finally {

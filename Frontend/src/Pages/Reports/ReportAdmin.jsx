@@ -18,6 +18,14 @@ const ReportAdmin = () => {
   const [email, setEmail] = useState('');
   const [splunkResults, setSplunkResults] = useState(null);
 
+  const api = axios.create({
+    baseURL: 'http://localhost:3000',
+    withCredentials: true,
+    headers: {
+      'Content-Type': 'application/json'
+    },
+  });
+
   useEffect(() => {
     fetchTeams();
   }, []);
@@ -37,7 +45,7 @@ const ReportAdmin = () => {
   const fetchTeams = async () => {
     try {
       setLoading(true);
-      const response = await axios.get('http://localhost:3000/getAllTeams');
+      const response = await api.get('/admin/all-teams');
       setTeams(response.data);
       setLoading(false);
     } catch (err) {
@@ -48,7 +56,8 @@ const ReportAdmin = () => {
 
   const fetchUsers = async (teamId) => {
     try {
-      const response = await axios.get(`http://localhost:3000/getTeamUsers/${teamId}`);
+      const response = await api.get(`/getTeamUsers/${teamId}`);
+      console.log(response.data);
       setUsers(response.data);
       setSelectedUser('');
       setScans([]);
@@ -63,7 +72,7 @@ const ReportAdmin = () => {
     
     try {
       setLoading(true);
-      const response = await axios.get(`http://localhost:3000/getUserScans/${selectedUser}`);
+      const response = await api.get(`/getUserScans/${selectedUser}`);
       setScans(response.data);
       setLoading(false);
     } catch (err) {
@@ -76,7 +85,7 @@ const ReportAdmin = () => {
   const fetchScanDetails = async (scanId) => {
     try {
       setLoading(true);
-      const response = await axios.get(`http://localhost:3000/getReport/${scanId}`);
+      const response = await api.get(`/getReport/${scanId}`);
       setScanDetails(response.data);
       setLoading(false);
     } catch (err) {
@@ -84,6 +93,44 @@ const ReportAdmin = () => {
       setError('Failed to fetch scan details');
       setLoading(false);
     }
+  };
+
+  // Add the missing formatting functions
+  const formatDynamicScanResults = (reportData) => {
+    let formattedDetails = 'Dynamic Scan Results:\n';
+    formattedDetails += 'Vulnerabilities:\n';
+  
+    if (reportData.vulnerabilities && Array.isArray(reportData.vulnerabilities)) {
+      reportData.vulnerabilities.forEach((vulnerability, index) => {
+        formattedDetails += `${index + 1}:\n`;
+        Object.entries(vulnerability).forEach(([key, value]) => {
+          formattedDetails += `  ${key}: ${value}\n`;
+        });
+        formattedDetails += '\n';
+      });
+    }
+  
+    return formattedDetails;
+  };
+  
+  const formatStaticScanResults = (reportData) => {
+    let formattedDetails = 'Static Scan Results:\n';
+    formattedDetails += 'Vulnerabilities:\n';
+  
+    if (reportData.scanDetails) {
+      Object.entries(reportData.scanDetails).forEach(([vulnerabilityType, files]) => {
+        formattedDetails += `${vulnerabilityType.toUpperCase()}:\n`;
+        Object.entries(files).forEach(([filePath, instances]) => {
+          formattedDetails += `  Path: ${filePath}\n`;
+          instances.forEach(instance => {
+            formattedDetails += `    ${instance}\n`;
+          });
+        });
+        formattedDetails += '\n';
+      });
+    }
+  
+    return formattedDetails;
   };
 
   const formatScanDetails = () => {
@@ -127,7 +174,7 @@ const ReportAdmin = () => {
   const handleSendEmail = async () => {
     try {
       const formattedDetails = formatScanDetails();
-      await axios.post('http://localhost:3000/email', {
+      await api.post('/email', {
         jsonData: formattedDetails,
         receiverEmail: email
       });
@@ -143,7 +190,7 @@ const ReportAdmin = () => {
   const handleDeleteScan = async (scanId) => {
     if (window.confirm('Are you sure you want to delete this scan?')) {
       try {
-        await axios.delete(`http://localhost:3000/deleteScan/${scanId}`);
+        await api.delete(`/deleteScan/${scanId}`);
         setScans(scans.filter(scan => scan._id !== scanId));
         setSelectedScanId(null);
         setScanDetails(null);
@@ -205,7 +252,7 @@ const ReportAdmin = () => {
                 >
                   <option value="">Select a team...</option>
                   {teams.map(team => (
-                    <option key={team._id} value={team._id}>{team.teamName}</option>
+                    <option key={team._id} value={team._id}>{team.username}</option>
                   ))}
                 </select>
                 <MdKeyboardArrowDown className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
