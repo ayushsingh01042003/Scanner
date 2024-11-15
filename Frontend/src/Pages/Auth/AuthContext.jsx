@@ -8,6 +8,7 @@ export const AuthProvider = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [loading, setLoading] = useState(true);
   const [username, setUsername] = useState('');
+  const [accountType, setAccountType] = useState('');
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -21,9 +22,11 @@ export const AuthProvider = ({ children }) => {
         const response = await axios.get('http://localhost:3000/user', { withCredentials: true });
         setIsAuthenticated(true);
         setUsername(response.data.username);
+        setAccountType(response.data.accountType);
       } catch (error) {
         setIsAuthenticated(false);
         setUsername('');
+        setAccountType('');
       }
       setLoading(false);
     };
@@ -45,38 +48,16 @@ export const AuthProvider = ({ children }) => {
       if (!response.ok) {
         throw new Error(data.msg );
       }
+      console.log(accountType);
   
     setIsAuthenticated(true);
     setUsername(username);
+    setAccountType(data.accountType);
     return data;
   } catch (error) {
     console.error('Login error:', error);
     throw error;
   }
-  };
-
-  const googleLogin = async (token) => {
-    try {
-      const response = await fetch('http://localhost:3000/api/auth/google-login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token }),
-        credentials: 'include'
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message);
-      }
-
-      setIsAuthenticated(true);
-      setUsername(data.username);
-      return data;
-    } catch (error) {
-      console.error('Google login error:', error);
-      throw error;
-    }
   };
 
   const logout = async () => {
@@ -86,7 +67,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated,setIsAuthenticated, username, setUsername, loading, login, googleLogin ,logout }}>
+    <AuthContext.Provider value={{ isAuthenticated,setIsAuthenticated, username, setUsername, loading, login ,logout, accountType, setAccountType }}>
       {children}
     </AuthContext.Provider>
   );

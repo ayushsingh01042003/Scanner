@@ -6,33 +6,29 @@ import ReportsPage from './Pages/Reports/ReportsPage';
 import Overview from './Pages/Overview/Overview';
 import Auth from './Pages/Auth/Auth';
 import ProtectedRoute from './components/ProtectedRoute';
-import { GoogleOAuthProvider } from '@react-oauth/google';
+import AddTeamMember from './Pages/Overview/AddTeamMembers';
+import ReportAdmin from './Pages/Reports/ReportAdmin'
+import ReportsPageTeam from './Pages/Reports/ReportDetailsTeam';
 
 const App = () => {
   const [clientId, setClientId] = useState('');
 
-  useEffect(() =>{
-    fetch('http://localhost:3000/google-client-id')
-    .then((response) => response.json())
-    .then((data) => setClientId(data.clientId))
-    .catch((error) => console.error('Error fetching Google Client ID:', error));
-  },[]);
-
   return (
-    clientId && (
-    <GoogleOAuthProvider clientId={clientId}>
+    (
       <AuthProvider>
         <Router>
           <Routes>
-            <Route path='/' element={<Auth />} /> 
+            <Route path='/' element={<Auth />} />
             <Route path='/home' element={<Layout />}>
               <Route path='overview' element={<ProtectedRoute element={<Overview />} />} />
               <Route path='reports' element={<ProtectedRoute element={<ReportsPage />} />} />
+              <Route path='reportsteam' element={<ProtectedRoute element={<ReportsPageTeam />} />} />
+              <Route path='addteammembers' element={<ProtectedRoute element={<AddTeamMember />}/>}/>
+              <Route path='adminreports' element={<ProtectedRoute element={<ReportAdmin/>}/>}/>
             </Route>
           </Routes>
         </Router>
       </AuthProvider>
-    </GoogleOAuthProvider>
     )
   );
 };
