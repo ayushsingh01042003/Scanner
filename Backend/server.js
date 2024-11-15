@@ -486,6 +486,41 @@ app.get('/remaining_requests', async (req, res) => {
   }
 })
 
+// app.get('/getAllProjects', async (req, res) => {
+//   try {
+//     const projects = await Project.find()
+//       .sort({ lastScanAt: -1 })
+//       .limit(10)  // Limit to the 10 most recently scanned projects
+//       .populate({
+//         path: 'scans',
+//         options: { sort: { timestamp: -1 } }
+//       });
+
+//     res.json(projects);
+//   } catch (error) {
+//     logger.error('Error fetching projects', { error: error.message });
+//     res.status(500).json({ message: error.message });
+//   }
+// });
+
+app.get('/getReport/:reportId', async (req, res) => {
+  try {
+    let report = await ScanReport.findById(req.params.reportId).populate('project', 'projectName');
+
+    if (!report) {
+      report = await DynamicScanReport.findById(req.params.reportId).populate('project', 'projectName');
+    }
+
+    if (!report) {
+      return res.status(404).json({ message: 'Report not found' });
+    }
+
+    res.json(report);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
 app.get('/getAllProjects', async (req, res) => {
   try {
     const projects = await Project.find()
@@ -551,6 +586,7 @@ app.post('/createReport', async (req, res) => {
     res.status(400).json({ message: error.message });
   }
 });
+
 
 app.get('/api/scanReports', async (req, res) => {
   try {
@@ -1060,56 +1096,47 @@ app.post('/splunk-search', async (req, res) => {
   }
 });
 
-app.get('/getUserScans/:userId', getAccountDetails, async (req, res) => {
+app.get('/getUserScans/:userId', verifyToken, getAccountDetails, async (req, res) => {
   try {
     const currentUser = req.account;
     const targetUserId = req.params.userId;
-    
+
     // Check if current user has permission to view these scans
-    const hasPermission = 
-      currentUser.accountType === 'team' && 
-      currentUser.teamMembers.includes(targetUserId) ||
-      currentUser.memberOf.some(teamId => 
-        Account.findById(teamId).teamMembers.includes(targetUserId)
-      );
-    
+    const hasPermission =
+      currentUser.accountType === 'admin' ||
+      (currentUser.accountType === 'team' &&
+        (currentUser.teamMembers.includes(targetUserId) ||
+          currentUser.memberOf.some((teamId) =>
+            Account.findById(teamId).then((team) => team.teamMembers.includes(targetUserId))
+          )));
+
     if (!hasPermission && currentUser._id.toString() !== targetUserId) {
-      return res.status(403).json({ msg: "Not authorized to view these scans" });
+      return res.status(403).json({ msg: 'Not authorized to view these scans' });
     }
 
     const scans = await ScanReport.find({ user: targetUserId })
       .populate('project', 'projectName')
       .sort({ timestamp: -1 });
-    
     res.json(scans);
   } catch (error) {
     console.error('Error fetching user scans:', error);
-    res.status(500).json({ msg: "Error fetching scans" });
+    res.status(500).json({ msg: 'Error fetching scans' });
   }
 });
 
-// Get all scans for the team
-app.get('/getAllScans', getAccountDetails, async (req, res) => {
+app.get('/getTeamUsers/:teamId',async(req, res) => {
   try {
-    const currentUser = req.account;
-    
-    if (currentUser.accountType !== 'team') {
-      return res.status(403).json({ msg: "Only team accounts can view all scans" });
-    }
-    
-    const scans = await ScanReport.find({
-      user: { $in: currentUser.teamMembers }
-    })
-      .populate('project', 'projectName')
-      .populate('user', 'username')
-      .sort({ timestamp: -1 });
-    
-    res.json(scans);
-  } catch (error) {
-    console.error('Error fetching all scans:', error);
-    res.status(500).json({ msg: "Error fetching scans" });
+    const { teamId } = req.params;
+    const teamAccounts = await Account.find({
+      memberOf: { $in: [teamId] },
+      accountType: 'personal'
+    });
+    res.json(teamAccounts);
+  } catch (err) {
+    console.error('Error fetching team users:', err);
+    res.status(500).json({ error: 'Failed to fetch team users' });
   }
-});
+  });
 
 app.listen(port, () => {
   connectToMongoDB();
