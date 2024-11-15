@@ -4,8 +4,6 @@ import { AuthContext } from './AuthContext';
 import Login from './Login';
 import Signup from './Signup';
 
-
-
 const Auth = () => {
   const [activeComponent, setActiveComponent] = useState('login');
   const { isAuthenticated, login } = useContext(AuthContext);

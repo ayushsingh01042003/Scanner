@@ -1,7 +1,6 @@
 import React, { useContext } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { RiBookMarkedLine } from 'react-icons/ri';
-import { FaChartPie } from 'react-icons/fa6';
 import { AuthContext } from '../Pages/Auth/AuthContext';
 
 const SidebarAdmin = () => {

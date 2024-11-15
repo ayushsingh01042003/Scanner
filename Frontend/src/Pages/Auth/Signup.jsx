@@ -1,5 +1,4 @@
 import React, { useState, useContext } from 'react';
-import { AuthContext } from './AuthContext';
 import axios from 'axios';
 import myImage from './loginpanel1.png';
 import bg from './background.png';
@@ -13,10 +12,8 @@ import {
   Button,
   AppPreview
 } from './loginpage.styles';
-import { useNavigate } from 'react-router-dom';
 
 const SignupPage = ({ setActiveComponent }) => {
-  const { setIsAuthenticated, setUsername: Setgoogleusername } = useContext(AuthContext);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -24,7 +21,6 @@ const SignupPage = ({ setActiveComponent }) => {
   const [message, setMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
   const [passwordErrors, setPasswordErrors] = useState([]);
-  const navigate = useNavigate();
 
   const validatePassword = (password) => {
     let errors = [];

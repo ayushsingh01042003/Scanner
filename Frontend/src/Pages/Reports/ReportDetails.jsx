@@ -5,7 +5,6 @@ import EmailModal from '../../components/EmailModal';
 import { MdDelete } from 'react-icons/md';
 
 const ReportDetails = () => {
-  const [projects, setProjects] = useState([]);
   const [projectsMap, setProjectsMap] = useState({});
   const [personalScans, setPersonalScans] = useState([]);
   const [selectedProjectId, setSelectedProjectId] = useState(null);
@@ -142,23 +141,6 @@ const ReportDetails = () => {
       handleAuthError(err);
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleDeleteProject = async (projectId) => {
-    if (window.confirm('Are you sure you want to delete this project? This action will delete all scans associated with the project.')) {
-      try {
-        await api.delete(`/deleteProject/${projectId}`);
-        setProjects(projects.filter(project => project._id !== projectId));
-        setSelectedProjectId(null);
-        setSelectedScanId(null);
-        setScanDetails(null);
-        setError(null);
-      } catch (err) {
-        console.error('Error deleting project:', err);
-        handleAuthError(err);
-        alert('Failed to delete project. Please try again.');
-      }
     }
   };
 

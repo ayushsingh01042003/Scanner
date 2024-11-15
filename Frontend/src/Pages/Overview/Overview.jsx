@@ -3,7 +3,6 @@ import { Pie } from 'react-chartjs-2';
 import { Chart as ChartJS, ArcElement, Tooltip, Legend } from 'chart.js';
 import { infinity } from 'ldrs'
 import { AuthContext } from '../Auth/AuthContext';
-import axios from 'axios';
 
 infinity.register()
 
@@ -37,16 +36,8 @@ const Overview = () => {
   const [statsData, setStatsData] = useState(null);
   const [scanData, setScanData] = useState(null);
   const { username } = useContext(AuthContext);
-  // const [vulnerabilityChartData, setVulnerabilityChartData] = useState({
-  //   labels: [],
-  //   datasets: [{
-  //     data: [],
-  //     backgroundColor: [],
-  //     hoverBackgroundColor: []
-  //   }]
-  // });
+
   const [indexing, setIndexing] = useState('');
-  const [scanResults, setScanResults] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const [totalPII, setTotalPII] = useState(0);
@@ -66,9 +57,6 @@ const Overview = () => {
       return `hsl(${hue}, 70%, 60%)`;
     });
   };
-
-  const [logStats, setLogStats] = useState(null);
-  const [logNumFiles, setLogNumFiles] = useState(0); 
 
   const debounceTimeouts = useRef({});
 

@@ -1,4 +1,3 @@
-import React, { useEffect, useState } from 'react';
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import { AuthProvider } from './Pages/Auth/AuthContext';
 import Layout from './components/Layout';
@@ -11,7 +10,6 @@ import ReportAdmin from './Pages/Reports/ReportAdmin'
 import ReportsPageTeam from './Pages/Reports/ReportDetailsTeam';
 
 const App = () => {
-  const [clientId, setClientId] = useState('');
 
   return (
     (

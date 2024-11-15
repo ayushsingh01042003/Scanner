@@ -486,41 +486,6 @@ app.get('/remaining_requests', async (req, res) => {
   }
 })
 
-// app.get('/getAllProjects', async (req, res) => {
-//   try {
-//     const projects = await Project.find()
-//       .sort({ lastScanAt: -1 })
-//       .limit(10)  // Limit to the 10 most recently scanned projects
-//       .populate({
-//         path: 'scans',
-//         options: { sort: { timestamp: -1 } }
-//       });
-
-//     res.json(projects);
-//   } catch (error) {
-//     logger.error('Error fetching projects', { error: error.message });
-//     res.status(500).json({ message: error.message });
-//   }
-// });
-
-// app.get('/getReport/:reportId', async (req, res) => {
-//   try {
-//     let report = await ScanReport.findById(req.params.reportId).populate('project', 'projectName');
-
-//     if (!report) {
-//       report = await DynamicScanReport.findById(req.params.reportId).populate('project', 'projectName');
-//     }
-
-//     if (!report) {
-//       return res.status(404).json({ message: 'Report not found' });
-//     }
-
-//     res.json(report);
-//   } catch (error) {
-//     res.status(500).json({ message: error.message });
-//   }
-// });
-
 app.get('/getAllProjects', async (req, res) => {
   try {
     const projects = await Project.find()
@@ -542,40 +507,6 @@ app.get('/getAllProjects', async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 });
-
-// app.post('/createReport', async (req, res) => {
-//   const { projectName, username, reportData, scanType } = req.body;
-
-//   try {
-//     let project = await Project.findOne({ projectName });
-
-//     if (!project) {
-//       project = new Project({ projectName });
-//     }
-
-//     const scanReport = new ScanReport({
-//       username,
-//       project: project._id,
-//       scanType,
-//       reportData: {
-//         scanDetails: reportData.scanDetails,
-//         stats: reportData.stats,
-//         logStats: reportData.logStats,
-//         vulnerabilities: reportData.vulnerabilities,
-//       },
-//     });
-//     await scanReport.save();
-
-//     project.scans.push(scanReport._id);
-//     project.lastScanAt = scanReport.timestamp;
-//     await project.save();
-
-//     res.status(201).json(scanReport);
-//   } catch (error) {
-//     logger.error('Error creating report', { projectName, username, error: error.message });
-//     res.status(400).json({ message: error.message });
-//   }
-// });
 
 app.post('/createReport', async (req, res) => {
   const { projectName, username, reportData, scanType } = req.body;
@@ -620,7 +551,6 @@ app.post('/createReport', async (req, res) => {
     res.status(400).json({ message: error.message });
   }
 });
-
 
 app.get('/api/scanReports', async (req, res) => {
   try {

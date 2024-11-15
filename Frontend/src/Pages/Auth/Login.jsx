@@ -1,6 +1,5 @@
 import React, { useState , useContext } from 'react';
 import { AuthContext } from './AuthContext';
-import styled from 'styled-components';
 import myImage from './loginpanel1.png';
 import bg from './background.png';
 import { SlLogin } from "react-icons/sl";
@@ -16,13 +15,9 @@ import {
 import { useNavigate } from 'react-router-dom';
 
 const Login = ({ setActiveComponent, onLogin }) => {
-  const { setIsAuthenticated , setUsername: Setgoogleusername } = useContext(AuthContext);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [teamname, setTeamname] = useState('');
-  const [level, setLevel] = useState(''); 
   const [error, setError] = useState('');
-  const navigate = useNavigate();
 
   const handleSubmit = async(e) => {
     e.preventDefault();

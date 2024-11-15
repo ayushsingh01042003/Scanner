@@ -16,13 +16,13 @@ const EmailModal = ({ isOpen, onClose, email, setEmail, onSend }) => {
         />
         <div className="flex justify-end">
           <button
-            className="w-[180px] mr-4 p-3 bg-gray-500 text-white rounded hover:bg-black hover:text-white rounded-lg transition duration-300 font-bold"
+            className="w-[180px] mr-4 p-3 bg-gray-500 text-white hover:bg-black hover:text-white rounded-lg transition duration-300 font-bold"
             onClick={onClose}
           >
             Cancel
           </button>
           <button
-            className="w-[180px] mr-4 p-2 bg-[#a4ff9e] text-black rounded hover:bg-black hover:text-[#a4ff9e] rounded-lg transition duriation-300 font-bold"
+            className="w-[180px] mr-4 p-2 bg-[#a4ff9e] text-black hover:bg-black hover:text-[#a4ff9e] rounded-lg transition duriation-300 font-bold"
             onClick={onSend}
           >
             Send
