@@ -1,6 +1,5 @@
 import React, { useState, useContext } from 'react';
 import { AuthContext } from './AuthContext';
-import styled from 'styled-components';
 import axios from 'axios';
 import myImage from './loginpanel1.png';
 import bg from './background.png';
@@ -14,103 +13,116 @@ import {
   Button,
   AppPreview
 } from './loginpage.styles';
-import { GoogleLogin } from '@react-oauth/google';
 import { useNavigate } from 'react-router-dom';
 
 const SignupPage = ({ setActiveComponent }) => {
-  const { setIsAuthenticated , setUsername: Setgoogleusername } = useContext(AuthContext);
+  const { setIsAuthenticated, setUsername: Setgoogleusername } = useContext(AuthContext);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [accountType, setAccountType] = useState(''); // Changed initial value from ' ' to ''
   const [message, setMessage] = useState('');
-  const [errormessage, setErrorMessage] = useState('');
+  const [errorMessage, setErrorMessage] = useState('');
   const [passwordErrors, setPasswordErrors] = useState([]);
   const navigate = useNavigate();
 
-  const validatePassword=(password) => {
-    let errors=[];
-
-    if(password.length<8) errors.push("Password must be minimum 8 letters\n");
-    if(!/[A-Z]/.test(password)) errors.push("Password must contain atleast one uppercase letter\n");
-    if(!/[a-z]/.test(password)) errors.push("Password must contain atleast one lowercase letter\n");
-    if(!/[0-9]/.test(password)) errors.push("Password must contain atleast one number\n")
-      
+  const validatePassword = (password) => {
+    let errors = [];
+    if (password.length < 8) errors.push("Password must be minimum 8 letters");
+    if (!/[A-Z]/.test(password)) errors.push("Password must contain atleast one uppercase letter");
+    if (!/[a-z]/.test(password)) errors.push("Password must contain atleast one lowercase letter");
+    if (!/[0-9]/.test(password)) errors.push("Password must contain atleast one number");
     return errors;
   }
 
-  const handleSubmit =async (e) => {
-    setMessage('');
-    setErrorMessage(''); 
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    const errors=validatePassword(password);
-    if(errors.length>0){
-      setPasswordErrors(errors);
-      setErrorMessage(errors[0]);
+    setMessage('');
+    setErrorMessage('');
+
+    // Validate all fields
+    if (!username.trim()) {
+      setErrorMessage('Username is required');
       return;
     }
+
+    if (!accountType || accountType === '') {
+      setErrorMessage('Please select an account type');
+      return;
+    }
+
+    const errors = validatePassword(password);
+    if (errors.length > 0) {
+      setPasswordErrors(errors);
+      setErrorMessage(errors.join('\n'));
+      return;
+    }
+
     if (password !== confirmPassword) {
       setErrorMessage('Passwords do not match');
       return;
     }
-    try {
-      const response = await axios.post('http://localhost:3000/signup', { username, password, confirmPassword}, { withCredentials: true });
-      setMessage(response.data.msg || 'Signup successful');
-      setPasswordErrors([]);
-    } catch (error) {
-      setErrorMessage(error.response?.data?.msg || 'Signup failed');
-    }
-  };
 
-  const handleSuccess = async (credentialResponse) => {
+    // Log the payload for debugging
+    const axiosInstance = axios.create({
+      baseURL: 'http://localhost:3000',
+      withCredentials: true,
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
     try {
-      const response = await fetch('http://localhost:3000/api/auth/google-login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ token: credentialResponse.credential }),
-        credentials: 'include',
+      const response = await axiosInstance.post('/signup', {
+        username,
+        password,
+        confirmPassword,
+        accountType
       });
 
-      if (response.ok) {
-        const data = await response.json();
-        // console.log('Google login response:', data);
-        document.cookie = `jwt=${data.token}; path=/; max-age=3600; SameSite=Strict; Secure`;
-        if (setIsAuthenticated && typeof setIsAuthenticated === 'function') {
-          setIsAuthenticated(true);
-        } else {
-          console.error('setIsAuthenticated is not a function');
-        }
-        Setgoogleusername(data.username);
-        navigate('/home');
-      } else {
-        console.error('Login failed');
+      console.log('Signup response:', response.data);
+      
+      if (response.data) {
+        setMessage(response.data.msg || 'Signup successful');
+        setPasswordErrors([]);
+        
+        // Clear form after successful signup
+        setUsername('');
+        setPassword('');
+        setConfirmPassword('');
+        setAccountType('');
+        
+        // Redirect to login after 2 seconds
+        setTimeout(() => {
+          setActiveComponent('login');
+        }, 2000);
       }
     } catch (error) {
-      console.error('Error during login:', error);
+      console.error('Signup error:', error);
+      setErrorMessage(
+        error.response?.data?.msg || 
+        'Signup failed. Please check your connection and try again.'
+      );
     }
   };
 
-  const handleError = () => {
-    console.log('Login Failed');
-  };
-
-
   return (
-    <Container  backgroundimage={bg} >
+    <Container backgroundimage={bg}>
       <Panel>
         <LeftSection>
-        <div className='p-14'>
-            <center><SlLogin size={35}/>
-            <h2 style={{ fontSize: '40px' }}> &zwj; Sign up</h2></center>
-        </div>
+          <div className='p-14'>
+            <center>
+              <SlLogin size={35}/>
+              <h2 style={{ fontSize: '40px' }}> Sign up</h2>
+            </center>
+          </div>
           <form onSubmit={handleSubmit}>
             <center>
               <Input
                 type="text"
-                placeholder="username"
+                placeholder="Username"
                 value={username}
-                onChange={(e) => setUsername(e.target.value)}
+                onChange={(e) => setUsername(e.target.value.trim())}
                 required
               />
               <Input
@@ -120,7 +132,7 @@ const SignupPage = ({ setActiveComponent }) => {
                 onChange={(e) => {
                   setPassword(e.target.value);
                   setPasswordErrors(validatePassword(e.target.value));
-                  }}
+                }}
                 required
               />
               <Input
@@ -130,17 +142,45 @@ const SignupPage = ({ setActiveComponent }) => {
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 required
               />
+              
+              <select 
+                value={accountType}
+                onChange={(e) => setAccountType(e.target.value)}
+                required
+                style={{
+                  width: '100%',
+                  padding: '10px',
+                  margin: '10px 0',
+                  borderRadius: '4px',
+                  border: '1px solid #ddd'
+                }}
+              >
+                <option value="" disabled>Select the account type</option>
+                <option value="admin">Enterprise</option>
+                <option value="team">Portfolio</option>
+                <option value="personal">Account</option>
+              </select>
+
               <Button type="submit">Sign up</Button>
-             </center>
+            </center>
           </form>
           <center>
-            {message && <p className="mt-4">{message}</p>}
-            {errormessage && <p className="mt-4" style={{ color: 'red' }} >{errormessage}</p>}
-          <p className='p-8'>Already have an account? <a href="#" style={{color: '#3498db'}} onClick={() => setActiveComponent('login')}>Login</a></p></center>
-          <center><GoogleLogin
-              onSuccess={handleSuccess}
-              onError={handleError}
-            /></center>        
+            {message && <p className="mt-4 text-green-500">{message}</p>}
+            {errorMessage && <p className="mt-4 text-red-500" style={{ whiteSpace: 'pre-line' }}>{errorMessage}</p>}
+            <p className='p-8'>
+              Already have an account? 
+              <a 
+                href="#" 
+                style={{color: '#3498db'}} 
+                onClick={(e) => {
+                  e.preventDefault();
+                  setActiveComponent('login');
+                }}
+              >
+                Login
+              </a>
+            </p>
+          </center>
         </LeftSection>
         <RightSection>
           <AppPreview src={myImage} alt="App Preview" />

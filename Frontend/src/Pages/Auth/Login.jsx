@@ -13,7 +13,6 @@ import {
     Button,
     AppPreview
 } from './loginpage.styles';
-import { GoogleLogin } from '@react-oauth/google';
 import { useNavigate } from 'react-router-dom';
 
 const Login = ({ setActiveComponent, onLogin }) => {
@@ -33,40 +32,6 @@ const Login = ({ setActiveComponent, onLogin }) => {
     } catch (error) {
       setError(error.message);
     }
-  };
-
-  const handleSuccess = async (credentialResponse) => {
-    try {
-      const response = await fetch('http://localhost:3000/api/auth/google-login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ token: credentialResponse.credential }),
-        credentials: 'include',
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        // console.log('Google login response:', data);
-        document.cookie = `jwt=${data.token}; path=/; max-age=3600; SameSite=Strict; Secure`;
-        if (setIsAuthenticated && typeof setIsAuthenticated === 'function') {
-          setIsAuthenticated(true);
-        } else {
-          console.error('setIsAuthenticated is not a function');
-        }
-        Setgoogleusername(data.username);
-        navigate('/home');
-      } else {
-        console.error('Login failed');
-      }
-    } catch (error) {
-      console.error('Error during login:', error);
-    }
-  };
-
-  const handleError = () => {
-    console.log('Login Failed');
   };
 
   return (
@@ -94,31 +59,12 @@ const Login = ({ setActiveComponent, onLogin }) => {
                 required
               />
               
-              <select value={level} onChange={(e) => setLevel(e.target.value)} required>
-                <option value="" disabled>Select the level</option>
-                <option value="Enterprise">Enterprise</option>
-                <option value="Portfolio">Portfolio</option>
-                <option value="Account">Account</option>
-              </select>
-
-              {level === 'Account' && (
-                <Input
-                  type="text"
-                  placeholder="team name"
-                  value={teamname}
-                  onChange={(e) => setTeamname(e.target.value)}
-                />
-              )}
-
               <Button type="submit">Login</Button>
             </center>
           </form>
-          {/* <center>{error && <p className="mt-4" style={{color:'red'}}>{error}</p>}
+          <center>{error && <p className="mt-4" style={{color:'red'}}>{error}</p>}
           <p className='p-8'>Don't have an account?<a href="#" style={{color: '#3498db'}} onClick={() => setActiveComponent('signup')}> Sign up</a></p>
-          <GoogleLogin 
-              onSuccess={handleSuccess}
-              onError={handleError}
-            /></center> */}
+          </center> 
         </LeftSection>
         <RightSection>
           <AppPreview src={myImage} alt="App Preview" />
