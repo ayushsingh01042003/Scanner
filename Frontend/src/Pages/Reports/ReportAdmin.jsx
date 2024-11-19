@@ -140,9 +140,11 @@ const ReportAdmin = () => {
 
     let formattedDetails = '';
     formattedDetails += `Scan Type: ${scanDetails.scanType}\n`;
-    formattedDetails += `Username: ${scanDetails.username}\n`;
+    formattedDetails += `Username: ${scanDetails.user.username}\n`;
     formattedDetails += `Project: ${scanDetails.project.projectName}\n`;
     formattedDetails += `Timestamp: ${new Date(scanDetails.timestamp).toLocaleString()}\n\n`;
+
+    console.log(scanDetails)
 
     try {
       if (scanDetails.scanType === 'dynamic') {

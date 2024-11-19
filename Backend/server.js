@@ -486,26 +486,9 @@ app.get('/remaining_requests', async (req, res) => {
   }
 })
 
-// app.get('/getAllProjects', async (req, res) => {
-//   try {
-//     const projects = await Project.find()
-//       .sort({ lastScanAt: -1 })
-//       .limit(10)  // Limit to the 10 most recently scanned projects
-//       .populate({
-//         path: 'scans',
-//         options: { sort: { timestamp: -1 } }
-//       });
-
-//     res.json(projects);
-//   } catch (error) {
-//     logger.error('Error fetching projects', { error: error.message });
-//     res.status(500).json({ message: error.message });
-//   }
-// });
-
 app.get('/getReport/:reportId', async (req, res) => {
   try {
-    let report = await ScanReport.findById(req.params.reportId).populate('project', 'projectName');
+    let report = await ScanReport.findById(req.params.reportId).populate('project', 'projectName').populate('user', 'username');
 
     if (!report) {
       report = await DynamicScanReport.findById(req.params.reportId).populate('project', 'projectName');
