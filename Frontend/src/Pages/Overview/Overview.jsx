@@ -229,6 +229,7 @@ const Overview = () => {
     }, 1000);
   };
 
+ 
   useEffect(() => {
     if (scanOption === 'dynamic' && statsData) {
       const logLevels = ['info', 'warn', 'error', 'debug'];
@@ -394,7 +395,7 @@ const Overview = () => {
 
         setStatsData(statsData);
         setScanData(scanData);
-        // setRepoInfo(statsData);
+        setRepoInfo(statsData);
 
         const processedResults = Object.entries(scanData).reduce((acc, [piiType, files]) => {
           Object.entries(files).forEach(([filePath, piiInstances]) => {
