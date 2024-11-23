@@ -227,7 +227,8 @@ const ReportDetails = () => {
     }
   
     let formattedDetails = '';
-    formattedDetails += `Scan Type: ${scanDetails.scanType}\n`;
+    const displayScanType = scanDetails.scanType === 'dynamic' ? 'dynamic' : 'static';
+    formattedDetails += `Scan Type: ${displayScanType}\n`;
     // Use optional chaining and provide a more descriptive fallback
     formattedDetails += `Username: ${scanDetails.user?.username || 'User Unavailable'}\n`;
     formattedDetails += `Project: ${scanDetails.project?.projectName || 'Project Unavailable'}\n`;
@@ -279,7 +280,7 @@ const ReportDetails = () => {
                 onClick={() => setSelectedScanId(scan._id)}
               >
                 <div>
-                  <span className="mr-2">[{scan.scanType}]</span>
+                <span className="mr-2">[{scan.scanType === 'dynamic' ? 'dynamic' : 'static'}]</span>
                   {new Date(scan.timestamp).toLocaleString()}
                 </div>
                 {scan._id === selectedScanId && (

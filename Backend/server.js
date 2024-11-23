@@ -899,7 +899,6 @@ app.post("/mistral-chat", async (req, res) => {
     }
 
     const generatedText = result.data.choices[0].message.content;
-    console.log("Generated Text:", generatedText);
 
     // Extract JSON object from the response
     const jsonMatch = generatedText.match(/\{[\s\S]*\}/);
@@ -908,7 +907,6 @@ app.post("/mistral-chat", async (req, res) => {
     }
 
     const jsonString = jsonMatch[0];
-    console.log("Extracted JSON String:", jsonString);
 
     // Use custom parsing function
     const generatedRegex = customJSONParse(jsonString);
@@ -924,7 +922,6 @@ app.post("/mistral-chat", async (req, res) => {
       })
     );
 
-    console.log("Formatted Regex:", formattedRegex);
     return res.json({ pii: formattedRegex });
   } catch (error) {
     console.error("Error in Mistral API:", error);
@@ -1060,7 +1057,6 @@ app.post("/mistral-chat-splunk", async (req, res) => {
     }
 
     const generatedText = result.data.choices[0].message.content;
-    console.log("Generated Text:", generatedText);
 
     // Extract JSON object from the response
     const jsonMatch = generatedText.match(/\{[\s\S]*\}/);
@@ -1069,7 +1065,6 @@ app.post("/mistral-chat-splunk", async (req, res) => {
     }
 
     const jsonString = jsonMatch[0];
-    console.log("Extracted JSON String:", jsonString);
 
     // Use custom parsing function
     const generatedRegex = customJSONParse(jsonString);
@@ -1085,7 +1080,6 @@ app.post("/mistral-chat-splunk", async (req, res) => {
       })
     );
 
-    console.log("Formatted Regex:", formattedRegex);
     return res.json({ pii: formattedRegex });
   } catch (error) {
     console.error("Error in Mistral API:", error);
