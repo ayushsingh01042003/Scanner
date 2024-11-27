@@ -139,7 +139,8 @@ const ReportAdmin = () => {
     }
 
     let formattedDetails = '';
-    formattedDetails += `Scan Type: ${scanDetails.scanType}\n`;
+    const displayScanType = scanDetails.scanType === 'dynamic' ? 'dynamic' : 'static';
+    formattedDetails += `Scan Type: ${displayScanType}\n`;
     formattedDetails += `Username: ${scanDetails.user.username}\n`;
     formattedDetails += `Project: ${scanDetails.project.projectName}\n`;
     formattedDetails += `Timestamp: ${new Date(scanDetails.timestamp).toLocaleString()}\n\n`;
@@ -213,7 +214,7 @@ const ReportAdmin = () => {
         onClick={() => setSelectedScanId(scan._id)}
       >
         <div>
-          <span className="mr-2">[{scan.scanType}]</span>
+          <span className="mr-2">[{scan.scanType === 'dynamic' ? 'dynamic' : 'static'}]</span>
           {new Date(scan.timestamp).toLocaleString()}
         </div>
         {scan._id === selectedScanId && (
