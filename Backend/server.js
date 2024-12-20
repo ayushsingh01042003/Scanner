@@ -29,10 +29,13 @@ import verifyToken from "./middlewares/verifyToken.js";
 import Account from "./models/account.model.js";
 import getAccountDetails from "./middlewares/getAccountDetails.js";
 import jwt from "jsonwebtoken";
+import path from "path";
 
 dotenv.config();
 const app = express();
 const port = 3000;
+
+const __dirname = path.resolve();
 
 app.use(express.json());
 app.use(cookieParser());
@@ -1216,7 +1219,13 @@ app.get("/getTeamUsers/:teamId", async (req, res) => {
   }
 });
 
+app.use(express.static(path.join(__dirname, "/Frontend/dist")));
+
+app.get("*", (req, res) => {
+  res.send(path.resolve(__dirname, "Frontend", "dist", "index.html"));
+})
+
 app.listen(port, () => {
   connectToMongoDB();
   logger.info(`Server is running on http://localhost:${port}`);
-});
+}); 

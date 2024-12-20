@@ -3,9 +3,9 @@
   "version": "1.0.0",
   "main": "server.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node server.js",
-    "compile": "nodemon server.js"
+    "dev": "nodemon Backend/server.js",
+    "build": "npm i && npm i --prefix Frontend && npm run build --prefix Frontend",
+    "start": "node Backend/server.js"
   },
   "keywords": [],
   "author": "",
