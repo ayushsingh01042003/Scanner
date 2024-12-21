@@ -19,7 +19,7 @@ export const AuthProvider = ({ children }) => {
       }
 
       try {
-        const response = await axios.get('http://localhost:3000/user', { withCredentials: true });
+        const response = await axios.get('https://scanx-3b1r.onrender.com/user', { withCredentials: true });
         setIsAuthenticated(true);
         setUsername(response.data.username);
         setAccountType(response.data.accountType);
@@ -36,7 +36,7 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (username, password) => {
     try{
-      const response = await fetch('http://localhost:3000/login', {
+      const response = await fetch('https://scanx-3b1r.onrender.com/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, password }),
@@ -61,7 +61,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   const logout = async () => {
-    await axios.post('http://localhost:3000/logout', {}, { withCredentials: true });
+    await axios.post('https://scanx-3b1r.onrender.com/logout', {}, { withCredentials: true });
     setIsAuthenticated(false);
     setUsername('');
   };

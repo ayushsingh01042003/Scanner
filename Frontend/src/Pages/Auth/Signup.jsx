@@ -61,7 +61,7 @@ const SignupPage = ({ setActiveComponent }) => {
 
     // Log the payload for debugging
     const axiosInstance = axios.create({
-      baseURL: 'http://localhost:3000',
+      baseURL: 'https://scanx-3b1r.onrender.com',
       withCredentials: true,
       headers: {
         'Content-Type': 'application/json',

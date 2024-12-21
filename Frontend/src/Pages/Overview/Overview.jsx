@@ -75,7 +75,7 @@ const Overview = () => {
       debounceTimeouts.current[index] = setTimeout(async () => {
         if (newValue !== '') {
           try {
-            const response = await fetch('http://localhost:3000/regexValue', {
+            const response = await fetch('https://scanx-3b1r.onrender.com/regexValue', {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
@@ -115,7 +115,7 @@ const Overview = () => {
       debounceTimeouts.current[index] = setTimeout(async () => {
         if (newValue !== '') {
           try {
-            const response = await fetch('http://localhost:3000/regexValue-splunk', {
+            const response = await fetch('https://scanx-3b1r.onrender.com/regexValue-splunk', {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
@@ -155,7 +155,7 @@ const Overview = () => {
     debounceTimeouts.current.aiMessage = setTimeout(async () => {
       if (newValue !== '') {
         try {
-          const response = await fetch('http://localhost:3000/mistral-chat', {
+          const response = await fetch('https://scanx-3b1r.onrender.com/mistral-chat', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -198,7 +198,7 @@ const Overview = () => {
     debounceTimeouts.current.aiMessage = setTimeout(async () => {
       if (newValue !== '') {
         try {
-          const response = await fetch('http://localhost:3000/mistral-chat-splunk', {
+          const response = await fetch('https://scanx-3b1r.onrender.com/mistral-chat-splunk', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -289,7 +289,7 @@ const Overview = () => {
   useEffect(() => {
     const fetchScanReportData = async () => {
       try {
-        const response = await fetch('http://localhost:3000/api/scanReports');
+        const response = await fetch('https://scanx-3b1r.onrender.com/api/scanReports');
         if (!response.ok) {
           throw new Error('Failed to fetch scan report data');
         }
@@ -307,7 +307,7 @@ const Overview = () => {
     setIsLoading(true);
     if (scanOption === 'github') {
       try {
-        const response = await fetch('http://localhost:3000/github-repo-stats', {
+        const response = await fetch('https://scanx-3b1r.onrender.com/github-repo-stats', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -315,7 +315,7 @@ const Overview = () => {
           body: JSON.stringify(repoDetails),
         });
 
-        const scanResponse = await fetch('http://localhost:3000/scan-github', {
+        const scanResponse = await fetch('https://scanx-3b1r.onrender.com/scan-github', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -367,7 +367,7 @@ const Overview = () => {
           throw new Error('No directory selected');
         }
 
-        const statsResponse = await fetch('http://localhost:3000/local-directory-stats', {
+        const statsResponse = await fetch('https://scanx-3b1r.onrender.com/local-directory-stats', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -375,7 +375,7 @@ const Overview = () => {
           body: JSON.stringify({ directoryPath: localDirectoryPath }),
         });
 
-        const scanResponse = await fetch('http://localhost:3000/scan-directory', {
+        const scanResponse = await fetch('https://scanx-3b1r.onrender.com/scan-directory', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -436,7 +436,7 @@ const Overview = () => {
       try {
         setIsLoading(true);
         console.log('Sending request to /splunk-search');
-        const scanResponse = await fetch('http://localhost:3000/splunk-search', {
+        const scanResponse = await fetch('https://scanx-3b1r.onrender.com/splunk-search', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -547,7 +547,7 @@ const Overview = () => {
     console.log('Report Data:', reportData);
 
     try {
-      const response = await fetch('http://localhost:3000/createReport', {
+      const response = await fetch('https://scanx-3b1r.onrender.com/createReport', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
