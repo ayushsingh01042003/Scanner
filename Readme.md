@@ -32,7 +32,7 @@ Create a `.env` file and include the following variables:
 
 - `GITHUB_TOKEN`: Token for accessing the GitHub API. [How to generate a GitHub token](https://docs.github.com/en/github/authenticating-to-github/creating-a-personal-access-token).
 - `MONGO_DB_URI`: MongoDB connection string.
-- `MISTRAL_API_KEY`: API key for Mistral AI regex suggestions. [How to generate a Mistral API key](https://mistral.ai/docs/api-keys).
+- `MISTRAL_API_KEY`: API key for Mistral AI regex suggestions.[How to generate a Mistral API Key](https://docs.mindmac.app/how-to.../add-api-key/create-mistral-ai-api-key)
 - `EMAIL`: Email address used to send reports.
 - `EMAIL_PASSWORD`: Application-specific password for the sender email. [How to generate a Google App Password](https://support.google.com/accounts/answer/185833?hl=en).
 - `JWT_SECRET`: Secret key for JSON Web Token (JWT) authentication.
